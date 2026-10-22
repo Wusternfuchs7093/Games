@@ -99,6 +99,10 @@ Extras:
   mayor `/city order house` then buy, or build it yourself (beds/workstations count, planner avoids it, but it is
   not registered/protected). Offered `/city claim` to register a self-built house as owned+protected — waiting.
 
+- User asked how to grow a village: answered with /city info requirements, beds+food+happiness>=60 for immigrants,
+  donations, materials, potential limit, and test speedups (setlevel, census, populationScale, freeConstruction,
+  buildIntervalTicks, ignorePotential). If they find growth too slow in play, consider easier defaults.
+
 Next:
 - In-game testing and bug fixing with the user (top priority).
 - Ideas not built yet (from MECHANICS.md): JourneyMap/Xaero markers, families/inheritance, guilds, banks/loans,
