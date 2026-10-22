@@ -384,5 +384,22 @@
   "cities.command.no_tavern": "В этом поселении нет таверны.",
   "cities.command.already_hired": "У вас уже есть наёмник.",
   "cities.command.mercenary_hired": "Наёмник присоединился к вам на %s дн.",
-  "cities.command.mercenary_dismissed": "Отпущено наёмников: %s"
+  "cities.command.mercenary_dismissed": "Отпущено наёмников: %s",
+  "cities.culture.plains": "Земледельцы равнин",
+  "cities.culture.plains.desc": "+20% еды; дружат с торговцами пустыни",
+  "cities.culture.desert": "Торговцы пустыни",
+  "cities.culture.desert.desc": "+25% от продажи караванов; дружат с земледельцами",
+  "cities.culture.savanna": "Пастухи саванны",
+  "cities.culture.savanna.desc": "+10% еды, +5 к силе; не любят северян",
+  "cities.culture.snowy": "Северяне",
+  "cities.culture.snowy.desc": "едят на 25% меньше, +8 к силе; родня таёжникам",
+  "cities.culture.taiga": "Лесорубы тайги",
+  "cities.culture.taiga.desc": "+30% материалов; родня северянам",
+  "cities.culture.other": "Пограничники",
+  "cities.culture.other.desc": "+25% к исследованиям",
+  "cities.info.culture": "Культура: %s — %s",
+  "cities.building.highway": "Тракт",
+  "cities.history.highway": "начали прокладывать тракт в %s",
+  "cities.history.ruined": "опустевший город превратился в руины",
+  "cities.history.old_town": "старый город с полными амбарами"
 }

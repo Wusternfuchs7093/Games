@@ -51,7 +51,9 @@ public final class TownPlanner {
         if (type != null) {
             start(level, data, s, type);
         } else {
-            startUpgrade(level, data, s);
+            if (!startUpgrade(level, data, s)) {
+                Highways.start(level, data, s);
+            }
         }
     }
 

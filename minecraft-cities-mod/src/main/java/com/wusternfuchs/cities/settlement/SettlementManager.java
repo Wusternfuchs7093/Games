@@ -7,6 +7,7 @@ import com.wusternfuchs.cities.building.ConstructionManager;
 import com.wusternfuchs.cities.building.TownPlanner;
 import com.wusternfuchs.cities.defense.DefenseManager;
 import com.wusternfuchs.cities.disaster.DisasterManager;
+import com.wusternfuchs.cities.disaster.RuinManager;
 import com.wusternfuchs.cities.diplomacy.DiplomacyManager;
 import com.wusternfuchs.cities.governance.GovernanceManager;
 import com.wusternfuchs.cities.governance.Law;
@@ -162,6 +163,13 @@ public final class SettlementManager {
         settlement.record(day(level), "founded", finalName);
         settlement.addFood(STARTING_FOOD);
         settlement.addMaterials(STARTING_MATERIALS);
+        // Some villages are older than the player's arrival: they start rich and build up quickly.
+        if (name == null && settlement.potential() >= 45 && random.nextDouble() < CitiesConfig.OLD_TOWN_CHANCE.get()) {
+            settlement.addMaterials(600);
+            settlement.addWealth(300);
+            settlement.addFood(300);
+            settlement.record(day(level), "old_town", "");
+        }
         data.add(settlement);
         census(level, data, settlement);
         CitiesMod.LOGGER.info("Registered settlement {} at {} (potential {})", finalName, center, settlement.potential());
@@ -281,8 +289,9 @@ public final class SettlementManager {
         if (s.hasTech(Tech.AGRICULTURE)) {
             produced += produced / 4;
         }
+        produced += produced * s.style().foodBonusPercent() / 100;
         produced -= DisasterManager.droughtLoss(s, produced);
-        int eaten = s.population() * CitiesConfig.FOOD_PER_VILLAGER.get();
+        int eaten = s.population() * CitiesConfig.FOOD_PER_VILLAGER.get() * s.style().consumptionPercent() / 100;
         if (s.hasLaw(Law.RATIONING)) {
             eaten /= 2;
         }
@@ -300,6 +309,7 @@ public final class SettlementManager {
         }
         int idle = s.adults() - s.employed();
         int gathered = s.employed() + idle * 2;
+        gathered += gathered * s.style().materialsBonusPercent() / 100;
         if (s.hasLaw(Law.BUILDING_PROGRAM)) {
             gathered += gathered / 2;
             s.addWealth(-2);
@@ -361,6 +371,7 @@ public final class SettlementManager {
             if (!s.abandoned() && s.emptyCensuses() >= ABANDON_AFTER_EMPTY_CENSUSES) {
                 s.setAbandoned(true);
                 s.record(day(level), "abandoned", "");
+                RuinManager.decay(level, s);
                 announce(level, s, Component.translatable("cities.announce.abandoned", s.name()).withStyle(ChatFormatting.GRAY));
             }
             return;
@@ -369,6 +380,7 @@ public final class SettlementManager {
         if (s.abandoned()) {
             s.setAbandoned(false);
             s.record(day(level), "resettled", "");
+            RuinManager.markForRebuilding(s);
         }
 
         SettlementTier next = s.tier().next();

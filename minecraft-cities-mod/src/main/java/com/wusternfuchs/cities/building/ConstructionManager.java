@@ -82,6 +82,9 @@ public final class ConstructionManager {
         List<Placement> next = queue.peek();
         BlockPos target = next.get(0).pos();
         if (!level.isLoaded(target)) {
+            if (building.type() == BuildingType.HIGHWAY) {
+                queue.poll(); // far stretches of road wait for the next time someone is around
+            }
             return;
         }
 
@@ -223,7 +226,9 @@ public final class ConstructionManager {
     private static BlockPos standingSpot(ServerLevel level, Settlement s, Building building, Blueprint bp,
                                          BlockPos target) {
         BlockPos base;
-        if (building.type() == BuildingType.WALL) {
+        if (building.type() == BuildingType.HIGHWAY) {
+            base = target;
+        } else if (building.type() == BuildingType.WALL) {
             BlockPos center = s.center();
             base = target.offset(2 * Integer.signum(center.getX() - target.getX()), 0,
                     2 * Integer.signum(center.getZ() - target.getZ()));
@@ -246,6 +251,9 @@ public final class ConstructionManager {
         Palette palette = Palette.of(s.style(), building.stone());
         if (building.type() == BuildingType.WALL) {
             return planWall(level, s, building, palette);
+        }
+        if (building.type() == BuildingType.HIGHWAY) {
+            return Highways.plan(level, s, building, palette);
         }
         List<List<Placement>> clearing = new ArrayList<>();
         List<List<Placement>> foundation = new ArrayList<>();

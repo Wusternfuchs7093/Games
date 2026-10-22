@@ -26,7 +26,9 @@ public enum BuildingType {
     TAVERN(1, true, Blueprints::tavern),
     LAMP(1, false, Blueprints::lamp),
     /** Ring wall around the town; laid out from the terrain, its variant is the radius. */
-    WALL(1, false, (palette, variant) -> new Blueprint.Builder(1, 1, 1).build());
+    WALL(1, false, (palette, variant) -> new Blueprint.Builder(1, 1, 1).build()),
+    /** Road to a friendly neighbour; laid out from the terrain, its variant packs the offset to the neighbour. */
+    HIGHWAY(1, false, (palette, variant) -> new Blueprint.Builder(1, 1, 1).build());
 
     private static final Map<String, Blueprint> CACHE = new HashMap<>();
 

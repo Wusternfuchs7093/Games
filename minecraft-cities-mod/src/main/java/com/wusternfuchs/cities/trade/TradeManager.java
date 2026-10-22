@@ -2,6 +2,7 @@ package com.wusternfuchs.cities.trade;
 
 import com.wusternfuchs.cities.CitiesConfig;
 import com.wusternfuchs.cities.building.BuildingType;
+import com.wusternfuchs.cities.building.Highways;
 import com.wusternfuchs.cities.diplomacy.DiplomacyManager;
 import com.wusternfuchs.cities.governance.Law;
 import com.wusternfuchs.cities.research.Tech;
@@ -152,6 +153,9 @@ public final class TradeManager {
         long now = level.getGameTime();
         double distance = Math.sqrt(from.center().distSqr(to.center()));
         long travel = Math.max(MIN_TRAVEL_TICKS, (long) (distance / TRAVEL_SPEED));
+        if (Highways.connected(from, to)) {
+            travel = travel * 2 / 3; // a good road is a fast road
+        }
         data.caravans().add(new Caravan(from.id(), to.id(), stock, amount, price, now, now + travel));
         from.record(SettlementManager.day(level), "caravan_sent", to.name());
         data.setDirty();
@@ -196,6 +200,9 @@ public final class TradeManager {
         if (from != null && from.hasTech(Tech.NAVIGATION)) {
             robbery /= 2;
         }
+        if (from != null && Highways.connected(from, to)) {
+            robbery /= 2; // lamps and passers-by keep robbers away
+        }
         double chance = Mth.clamp(robbery - 0.03 * (from == null ? 0 : from.guards()), Math.min(0.02, robbery), robbery);
         if (level.getRandom().nextDouble() < chance) {
             String origin = from == null ? "?" : from.name();
@@ -213,7 +220,7 @@ public final class TradeManager {
         to.addWealth(-paid);
         to.record(day, "caravan_arrived", from == null ? "?" : from.name());
         if (from != null) {
-            from.addWealth(paid);
+            from.addWealth(paid + paid * from.style().tradeBonusPercent() / 100);
             from.record(day, "caravan_sold", to.name());
             DiplomacyManager.change(from, to, RELATION_PER_TRADE);
         }

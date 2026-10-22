@@ -42,7 +42,7 @@ public final class DiplomacyManager {
         if (a.id().equals(b.overlord()) || b.id().equals(a.overlord())) {
             return 60; // a realm sticks together
         }
-        int attitude = a.style() == b.style() ? 20 : -5;
+        int attitude = a.style().affinity(b.style());
         boolean close = a.center().distSqr(b.center()) <= (double) RIVALRY_DISTANCE * RIVALRY_DISTANCE;
         boolean peers = Math.abs(a.tier().ordinal() - b.tier().ordinal()) <= 1;
         boolean ambitious = Math.min(a.tier().ordinal(), b.tier().ordinal()) >= SettlementTier.TOWNSHIP.ordinal();

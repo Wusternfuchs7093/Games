@@ -38,6 +38,10 @@ public final class CitiesConfig {
         BUILDER.pop().push("growth");
     }
 
+    public static final ModConfigSpec.DoubleValue OLD_TOWN_CHANCE = BUILDER
+            .comment("Chance that a newly found village with good land starts as an old, wealthy town that builds up fast.")
+            .defineInRange("oldTownChance", 0.15, 0.0, 1.0);
+
     public static final ModConfigSpec.BooleanValue IGNORE_POTENTIAL = BUILDER
             .comment("If true, every settlement can grow up to a capital regardless of its hidden potential.")
             .define("ignorePotential", false);

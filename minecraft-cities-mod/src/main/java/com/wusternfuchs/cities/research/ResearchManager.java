@@ -27,6 +27,7 @@ public final class ResearchManager {
         if (s.hasTech(Tech.PRINTING)) {
             points += points / 2;
         }
+        points += points * s.style().researchBonusPercent() / 100;
         return points;
     }
 

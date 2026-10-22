@@ -92,7 +92,7 @@ public final class WarManager {
     /** Rough military might: guards, golems, size, walls and the right technologies. */
     public static int strength(Settlement s, boolean defending) {
         int strength = s.guards() * 3 + s.golems() * 2 + s.tier().ordinal() * 5
-                + s.count(Trait.BRAVE);
+                + s.count(Trait.BRAVE) + s.style().defenseBonus();
         if (s.hasTech(Tech.METALLURGY)) {
             strength += 10;
         }

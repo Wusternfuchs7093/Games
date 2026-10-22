@@ -384,5 +384,22 @@
   "cities.command.no_tavern": "This settlement has no tavern.",
   "cities.command.already_hired": "You already have a mercenary.",
   "cities.command.mercenary_hired": "A mercenary joins you for %s days.",
-  "cities.command.mercenary_dismissed": "Mercenaries dismissed: %s"
+  "cities.command.mercenary_dismissed": "Mercenaries dismissed: %s",
+  "cities.culture.plains": "Plains farmers",
+  "cities.culture.plains.desc": "+20% food; friends of desert traders",
+  "cities.culture.desert": "Desert traders",
+  "cities.culture.desert.desc": "+25% from caravans they sell; friends of plains farmers",
+  "cities.culture.savanna": "Savanna herders",
+  "cities.culture.savanna.desc": "+10% food, +5 strength; dislike the north",
+  "cities.culture.snowy": "Northerners",
+  "cities.culture.snowy.desc": "eat 25% less, +8 strength; kin of the taiga",
+  "cities.culture.taiga": "Taiga woodcutters",
+  "cities.culture.taiga.desc": "+30% materials; kin of the north",
+  "cities.culture.other": "Borderlanders",
+  "cities.culture.other.desc": "+25% research",
+  "cities.info.culture": "Culture: %s — %s",
+  "cities.building.highway": "Highway",
+  "cities.history.highway": "began a road to %s",
+  "cities.history.ruined": "the empty town fell into ruin",
+  "cities.history.old_town": "an old town with full stores"
 }

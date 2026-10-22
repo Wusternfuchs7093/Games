@@ -355,6 +355,8 @@ public final class CityCommands {
                 s.abandoned() ? Component.translatable("cities.info.abandoned") : Component.empty()), false);
         source.sendSuccess(() -> Component.translatable("cities.info.founded", s.foundedDay(),
                 Component.translatable("cities.style." + s.style().name().toLowerCase(Locale.ROOT))), false);
+        source.sendSuccess(() -> Component.translatable("cities.info.culture", s.style().cultureName(),
+                s.style().cultureDescription()).withStyle(ChatFormatting.GRAY), false);
         source.sendSuccess(() -> Component.translatable("cities.info.population", s.population(), s.adults(),
                 s.children(), s.beds()), false);
         source.sendSuccess(() -> Component.translatable("cities.info.work", s.employed(), s.workstations(),
