@@ -116,6 +116,8 @@ Extras:
 - Explained happiness factors (see `settlement/Mood`). The user is learning the systems one by one; a short
   "how each system works" player guide in README could save repeated questions.
 
+- User asked how to add a building to a village: town plans itself; mayor `/city order <type>` (be mayor via `/city run` election or `/city found`); op `/city admin build <type>`; self-built blocks count only as beds/workstations (POI), not as registered buildings. Same `/city claim` offer applies.
+
 Next:
 - In-game testing and bug fixing with the user (top priority).
 - Ideas not built yet (from MECHANICS.md): JourneyMap/Xaero markers, families/inheritance, guilds, banks/loans,
