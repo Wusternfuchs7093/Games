@@ -17,6 +17,10 @@ import com.wusternfuchs.cities.defense.DefenseManager;
 import com.wusternfuchs.cities.diplomacy.DiplomacyManager;
 import com.wusternfuchs.cities.disaster.DisasterManager;
 import com.wusternfuchs.cities.settlement.Mood;
+import com.wusternfuchs.cities.network.CitiesNetwork;
+import com.wusternfuchs.cities.settlement.BorderDisplay;
+import net.minecraft.server.network.Filterable;
+import net.minecraft.world.item.component.WrittenBookContent;
 import com.wusternfuchs.cities.people.SocialClass;
 import com.wusternfuchs.cities.quest.Contract;
 import com.wusternfuchs.cities.quest.QuestManager;
@@ -47,6 +51,7 @@ import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.Commands;
 import net.minecraft.commands.SharedSuggestionProvider;
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.component.DataComponents;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.MutableComponent;
 import net.minecraft.server.level.ServerLevel;
@@ -58,6 +63,7 @@ import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.levelgen.Heightmap;
 
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Locale;
@@ -224,6 +230,9 @@ public final class CityCommands {
                                 .executes(CityCommands::found)))
                 .then(Commands.literal("run").executes(CityCommands::run))
                 .then(Commands.literal("wars").executes(CityCommands::wars))
+                .then(Commands.literal("gui").executes(CityCommands::gui))
+                .then(Commands.literal("borders").executes(CityCommands::borders))
+                .then(Commands.literal("chronicle").executes(CityCommands::chronicle))
                 .then(Commands.literal("board")
                         .executes(CityCommands::board)
                         .then(Commands.literal("deliver")
@@ -742,13 +751,68 @@ public final class CityCommands {
         return target;
     }
 
+    private static int gui(CommandContext<CommandSourceStack> ctx) throws CommandSyntaxException {
+        CitiesNetwork.openFor(ctx.getSource().getPlayerOrException());
+        return 1;
+    }
+
+    private static int borders(CommandContext<CommandSourceStack> ctx) throws CommandSyntaxException {
+        boolean on = BorderDisplay.toggle(ctx.getSource().getPlayerOrException());
+        ctx.getSource().sendSuccess(() -> Component.translatable(on ? "cities.command.borders_on" : "cities.command.borders_off"),
+                false);
+        return on ? 1 : 0;
+    }
+
+    private static final int CHRONICLE_LINES_PER_PAGE = 6;
+    private static final int BOOK_TITLE_MAX = 32;
+
+    /** Turns a book in hand into the written chronicle of the settlement. */
+    private static int chronicle(CommandContext<CommandSourceStack> ctx) throws CommandSyntaxException {
+        ServerPlayer player = ctx.getSource().getPlayerOrException();
+        Settlement s = here(ctx);
+        if (!player.getMainHandItem().is(Items.BOOK) && !player.getMainHandItem().is(Items.WRITABLE_BOOK)) {
+            throw failure("cities.command.need_book");
+        }
+        List<Filterable<Component>> pages = new ArrayList<>();
+        pages.add(Filterable.passThrough(Component.empty()
+                .append(Component.literal(s.name()).withStyle(ChatFormatting.BOLD))
+                .append("\n\n").append(s.tier().displayName())
+                .append("\n").append(s.style().cultureName())
+                .append("\n\n").append(Component.translatable("cities.chronicle.founded", s.foundedDay()))
+                .append("\n").append(Component.translatable("cities.chronicle.population", s.population()))));
+        List<HistoryEntry> entries = s.history();
+        for (int i = 0; i < entries.size(); i += CHRONICLE_LINES_PER_PAGE) {
+            MutableComponent page = Component.empty();
+            for (int j = i; j < Math.min(entries.size(), i + CHRONICLE_LINES_PER_PAGE); j++) {
+                if (j > i) {
+                    page.append("\n\n");
+                }
+                page.append(entries.get(j).describe());
+            }
+            pages.add(Filterable.passThrough(page));
+        }
+        // Book titles are plain text resolved on the server, so the town's own name is the title.
+        String title = s.name();
+        if (title.length() > BOOK_TITLE_MAX) {
+            title = title.substring(0, BOOK_TITLE_MAX);
+        }
+        ItemStack book = new ItemStack(Items.WRITTEN_BOOK);
+        book.set(DataComponents.WRITTEN_BOOK_CONTENT,
+                new WrittenBookContent(Filterable.passThrough(title), s.name(), 0, pages, true));
+        player.getMainHandItem().shrink(1);
+        QuestManager.give(player, book);
+        ctx.getSource().sendSuccess(() -> Component.translatable("cities.command.chronicle_written", s.name()), false);
+        return pages.size();
+    }
+
     private static CommandSyntaxException failure(String key) {
         return new SimpleCommandExceptionType(Component.translatable(key)).create();
     }
 
     private static int board(CommandContext<CommandSourceStack> ctx) throws CommandSyntaxException {
         ServerPlayer player = ctx.getSource().getPlayerOrException();
-        QuestManager.showBoard(player, here(ctx), SettlementManager.day(ctx.getSource().getLevel()));
+        QuestManager.showBoard(player::sendSystemMessage, player.getUUID(), here(ctx),
+                SettlementManager.day(ctx.getSource().getLevel()));
         return 1;
     }
 

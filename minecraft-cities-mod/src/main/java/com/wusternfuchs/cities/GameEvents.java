@@ -6,6 +6,7 @@ import com.wusternfuchs.cities.entity.Guard;
 import com.wusternfuchs.cities.people.ResidentManager;
 import com.wusternfuchs.cities.quest.QuestManager;
 import com.wusternfuchs.cities.quest.TownServices;
+import com.wusternfuchs.cities.settlement.BorderDisplay;
 import com.wusternfuchs.cities.settlement.Settlement;
 import com.wusternfuchs.cities.settlement.SettlementData;
 import com.wusternfuchs.cities.settlement.SettlementManager;
@@ -47,12 +48,14 @@ public final class GameEvents {
     public static void onPlayerTick(PlayerTickEvent.Post event) {
         if (event.getEntity() instanceof ServerPlayer player) {
             SettlementManager.trackPlayer(player);
+            BorderDisplay.tick(player);
         }
     }
 
     @SubscribeEvent
     public static void onLogout(PlayerEvent.PlayerLoggedOutEvent event) {
         SettlementManager.forgetPlayer(event.getEntity());
+        BorderDisplay.forget(event.getEntity().getUUID());
     }
 
     @SubscribeEvent
@@ -103,7 +106,7 @@ public final class GameEvents {
                 && level.getBlockState(event.getPos()).is(Blocks.BELL)) {
             Settlement s = SettlementData.get(level).at(event.getPos());
             if (s != null) {
-                QuestManager.showBoard(player, s, SettlementManager.day(level));
+                QuestManager.showBoard(player::sendSystemMessage, player.getUUID(), s, SettlementManager.day(level));
                 event.setCancellationResult(InteractionResult.SUCCESS);
                 event.setCanceled(true);
             }

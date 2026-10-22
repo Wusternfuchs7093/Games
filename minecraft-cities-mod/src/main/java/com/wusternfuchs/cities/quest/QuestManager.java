@@ -28,6 +28,8 @@ import javax.annotation.Nullable;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
+import java.util.UUID;
+import java.util.function.Consumer;
 
 /** The settlement's job board and the personal wishes of its villagers. */
 public final class QuestManager {
@@ -111,26 +113,26 @@ public final class QuestManager {
 
     // ------------------------------------------------------------------ board
 
-    public static void showBoard(ServerPlayer player, Settlement s, long day) {
-        player.sendSystemMessage(Component.translatable("cities.board.header", s.name()).withStyle(ChatFormatting.GOLD));
+    public static void showBoard(Consumer<Component> out, UUID viewer, Settlement s, long day) {
+        out.accept(Component.translatable("cities.board.header", s.name()).withStyle(ChatFormatting.GOLD));
         if (s.contracts().isEmpty() && s.requests().isEmpty()) {
-            player.sendSystemMessage(Component.translatable("cities.board.empty").withStyle(ChatFormatting.GRAY));
+            out.accept(Component.translatable("cities.board.empty").withStyle(ChatFormatting.GRAY));
         }
         for (Contract contract : s.contracts()) {
             Component taken = contract.taker() == null ? Component.empty()
-                    : Component.translatable(contract.taker().equals(player.getUUID())
+                    : Component.translatable(contract.taker().equals(viewer)
                     ? "cities.board.taken_by_you" : "cities.board.taken");
-            player.sendSystemMessage(Component.literal("  #" + contract.id() + " ").withStyle(ChatFormatting.YELLOW)
+            out.accept(Component.literal("  #" + contract.id() + " ").withStyle(ChatFormatting.YELLOW)
                     .append(contract.describe())
                     .append(Component.translatable("cities.board.progress", contract.progress(), contract.count(),
                             contract.reward(), Math.max(0, contract.expires() - day)).withStyle(ChatFormatting.GRAY))
                     .append(taken));
         }
         for (Request request : s.requests()) {
-            player.sendSystemMessage(Component.literal("  ♥ ").withStyle(ChatFormatting.LIGHT_PURPLE)
+            out.accept(Component.literal("  ♥ ").withStyle(ChatFormatting.LIGHT_PURPLE)
                     .append(request.describe()));
         }
-        player.sendSystemMessage(Component.translatable("cities.board.hint").withStyle(ChatFormatting.DARK_GRAY));
+        out.accept(Component.translatable("cities.board.hint").withStyle(ChatFormatting.DARK_GRAY));
     }
 
     @Nullable
