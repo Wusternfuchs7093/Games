@@ -103,6 +103,10 @@ Extras:
   donations, materials, potential limit, and test speedups (setlevel, census, populationScale, freeConstruction,
   buildIntervalTicks, ignorePotential). If they find growth too slow in play, consider easier defaults.
 
+- User asked how to make a warehouse: town builds it itself (Village tier, 32+ materials, after urgent needs),
+  mayor `/city order warehouse`, op `/city admin build warehouse`. Player-placed chests do not count — only the
+  warehouse blueprint's chests are storage. Possible future feature: let players designate their own chests.
+
 Next:
 - In-game testing and bug fixing with the user (top priority).
 - Ideas not built yet (from MECHANICS.md): JourneyMap/Xaero markers, families/inheritance, guilds, banks/loans,
