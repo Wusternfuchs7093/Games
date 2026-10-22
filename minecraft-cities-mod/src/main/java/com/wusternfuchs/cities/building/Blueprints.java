@@ -94,6 +94,17 @@ public final class Blueprints {
         }).build();
     }
 
+    public static Blueprint hospital(Palette p, int variant) {
+        return hall(p, 9, 7, b -> {
+            b.set(2, 1, 1, Blocks.BREWING_STAND.defaultBlockState());
+            b.set(6, 1, 1, Blocks.BREWING_STAND.defaultBlockState());
+            b.set(4, 1, 1, Blocks.CAULDRON.defaultBlockState());
+            BlockState cot = Blocks.WHITE_CARPET.defaultBlockState();
+            b.fill(1, 1, 3, 2, 1, 4, cot);
+            b.fill(6, 1, 3, 7, 1, 4, cot);
+        }).build();
+    }
+
     public static Blueprint farm(Palette p, int variant) {
         Blueprint.Builder b = new Blueprint.Builder(9, 2, 9);
         b.fill(0, 0, 0, 8, 0, 8, p.pillar());

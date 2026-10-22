@@ -15,6 +15,8 @@ import com.wusternfuchs.cities.building.ConstructionProject;
 import com.wusternfuchs.cities.building.TownPlanner;
 import com.wusternfuchs.cities.defense.DefenseManager;
 import com.wusternfuchs.cities.diplomacy.DiplomacyManager;
+import com.wusternfuchs.cities.disaster.DisasterManager;
+import com.wusternfuchs.cities.settlement.Mood;
 import com.wusternfuchs.cities.diplomacy.Relation;
 import com.wusternfuchs.cities.governance.GovernanceManager;
 import com.wusternfuchs.cities.governance.Law;
@@ -108,6 +110,8 @@ public final class CityCommands {
             new SimpleCommandExceptionType(Component.translatable("cities.command.not_at_war"));
     private static final SimpleCommandExceptionType NO_WAR_HERE =
             new SimpleCommandExceptionType(Component.translatable("cities.command.no_war_here"));
+    private static final SimpleCommandExceptionType DISASTER_FAILED =
+            new SimpleCommandExceptionType(Component.translatable("cities.command.disaster_failed"));
     private static final SimpleCommandExceptionType NOT_BUILDING =
             new SimpleCommandExceptionType(Component.translatable("cities.command.not_building"));
 
@@ -126,6 +130,10 @@ public final class CityCommands {
 
     private static final SuggestionProvider<CommandSourceStack> TECH_IDS = (ctx, builder) ->
             SharedSuggestionProvider.suggest(Arrays.stream(Tech.values()).map(Tech::id), builder);
+
+    private static final SuggestionProvider<CommandSourceStack> DISASTER_IDS = (ctx, builder) ->
+            SharedSuggestionProvider.suggest(Arrays.stream(DisasterManager.Kind.values())
+                    .map(kind -> kind.name().toLowerCase(Locale.ROOT)), builder);
 
     private static final SuggestionProvider<CommandSourceStack> BUILDING_IDS = (ctx, builder) ->
             SharedSuggestionProvider.suggest(Arrays.stream(BuildingType.values()).map(BuildingType::id), builder);
@@ -161,6 +169,10 @@ public final class CityCommands {
                                 .suggests(SETTLEMENT_NAMES)
                                 .executes(ctx -> declareWar(ctx, true))))
                 .then(Commands.literal("battle").executes(CityCommands::forceBattle))
+                .then(Commands.literal("disaster")
+                        .then(Commands.argument("kind", StringArgumentType.word())
+                                .suggests(DISASTER_IDS)
+                                .executes(CityCommands::forceDisaster)))
                 .then(Commands.literal("relation")
                         .then(Commands.argument("value", IntegerArgumentType.integer(-100, 100))
                                 .then(Commands.argument("name", StringArgumentType.greedyString())
@@ -205,6 +217,11 @@ public final class CityCommands {
                                 .executes(CityCommands::found)))
                 .then(Commands.literal("run").executes(CityCommands::run))
                 .then(Commands.literal("wars").executes(CityCommands::wars))
+                .then(Commands.literal("mood")
+                        .executes(ctx -> mood(ctx, here(ctx)))
+                        .then(Commands.argument("name", StringArgumentType.greedyString())
+                                .suggests(SETTLEMENT_NAMES)
+                                .executes(ctx -> mood(ctx, named(ctx)))))
                 .then(Commands.literal("war")
                         .then(Commands.literal("declare")
                                 .then(Commands.argument("name", StringArgumentType.greedyString())
@@ -333,6 +350,17 @@ public final class CityCommands {
             int ourScore = attacking ? war.score() : -war.score();
             source.sendSuccess(() -> Component.translatable("cities.info.war", enemy == null ? "?" : enemy.name(),
                     ourScore).withStyle(ChatFormatting.RED), false);
+        }
+        if (s.fire() != null) {
+            source.sendSuccess(() -> Component.translatable("cities.info.fire", s.fire().type().displayName())
+                    .withStyle(ChatFormatting.RED), false);
+        }
+        if (s.epidemic() > 0) {
+            source.sendSuccess(() -> Component.translatable("cities.info.epidemic", s.sick())
+                    .withStyle(ChatFormatting.DARK_GREEN), false);
+        }
+        if (s.drought() > 0) {
+            source.sendSuccess(() -> Component.translatable("cities.info.drought").withStyle(ChatFormatting.GOLD), false);
         }
         Tech studying = s.researching();
         source.sendSuccess(() -> studying == null
@@ -668,6 +696,28 @@ public final class CityCommands {
         data(ctx).setDirty();
         ctx.getSource().sendSuccess(() -> Component.translatable("cities.command.research_set", s.name(),
                 tech.displayName()), false);
+        return 1;
+    }
+
+    private static int mood(CommandContext<CommandSourceStack> ctx, Settlement s) {
+        CommandSourceStack source = ctx.getSource();
+        List<Mood.Factor> factors = Mood.factors(ctx.getSource().getLevel(), s);
+        int target = Mood.target(factors);
+        source.sendSuccess(() -> Component.translatable("cities.command.mood.header", s.name(), s.happiness(), target)
+                .withStyle(ChatFormatting.GOLD), false);
+        for (Mood.Factor factor : factors) {
+            source.sendSuccess(factor::describe, false);
+        }
+        return target;
+    }
+
+    private static int forceDisaster(CommandContext<CommandSourceStack> ctx) throws CommandSyntaxException {
+        Settlement s = inside(ctx);
+        DisasterManager.Kind kind = DisasterManager.kindById(StringArgumentType.getString(ctx, "kind"));
+        if (kind == null || !DisasterManager.start(ctx.getSource().getLevel(), data(ctx), s, kind)) {
+            throw DISASTER_FAILED.create();
+        }
+        data(ctx).setDirty();
         return 1;
     }
 

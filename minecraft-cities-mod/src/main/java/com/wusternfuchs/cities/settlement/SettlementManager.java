@@ -6,6 +6,7 @@ import com.wusternfuchs.cities.building.BuildingType;
 import com.wusternfuchs.cities.building.ConstructionManager;
 import com.wusternfuchs.cities.building.TownPlanner;
 import com.wusternfuchs.cities.defense.DefenseManager;
+import com.wusternfuchs.cities.disaster.DisasterManager;
 import com.wusternfuchs.cities.diplomacy.DiplomacyManager;
 import com.wusternfuchs.cities.governance.GovernanceManager;
 import com.wusternfuchs.cities.governance.Law;
@@ -101,6 +102,7 @@ public final class SettlementManager {
             if (CitiesConfig.WARS_ENABLED.get()) {
                 WarManager.tick(level, data);
             }
+            DisasterManager.tickFires(level, data);
         }
         if (time % FESTIVAL_TICK_INTERVAL == 0) {
             GovernanceManager.tickFestivals(level, SettlementData.get(level));
@@ -204,6 +206,7 @@ public final class SettlementManager {
         census(level, data, s);
         GovernanceManager.govern(level, data, s);
         ConstructionManager.collectStorage(level, s);
+        DisasterManager.update(level, data, s);
         runEconomy(s);
         updateHappiness(level, s);
         migrate(level, data, s);
@@ -271,12 +274,15 @@ public final class SettlementManager {
         if (s.hasTech(Tech.AGRICULTURE)) {
             produced += produced / 4;
         }
+        produced -= DisasterManager.droughtLoss(s, produced);
         int eaten = s.population() * CitiesConfig.FOOD_PER_VILLAGER.get();
         if (s.hasLaw(Law.RATIONING)) {
             eaten /= 2;
         }
         s.addFood(produced - eaten);
-        int taxes = s.tax().collect(s.employed());
+        // The sick stay home.
+        int working = s.adults() == 0 ? 0 : s.employed() * Math.max(0, s.adults() - s.sick()) / s.adults();
+        int taxes = s.tax().collect(working);
         if (s.hasTech(Tech.CURRENCY)) {
             taxes += taxes / 4;
         }
@@ -293,32 +299,11 @@ public final class SettlementManager {
         s.addMaterials(gathered);
     }
 
+    /** Happiness moves 40% of the way towards what the current {@link Mood} factors add up to. */
     private static void updateHappiness(ServerLevel level, Settlement s) {
-        int target = 50;
-        int freeBeds = s.beds() - s.population();
-        target += freeBeds >= 0 ? Math.min(15, freeBeds * 3) : Math.max(-30, freeBeds * 5);
-        if (s.adults() > 0) {
-            target += (int) Math.round(15.0 * s.employed() / s.adults()) - 5;
-        }
-        target += Math.min(10, s.golems() * 5);
-        target += Math.min(15, s.guards() * 3);
-        target += Math.min(9, s.count(BuildingType.WATCHTOWER) * 3);
-        target += Math.min(10, s.count(BuildingType.MARKET) * 5);
-        target += s.count(BuildingType.WELL) > 0 ? 5 : 0;
-        target += GovernanceManager.happinessModifier(s);
-        target += s.hasTech(Tech.MEDICINE) ? 5 : 0;
-        if (s.food() <= 0) {
-            target -= 25;
-        } else if (s.food() >= s.population() * 20) {
-            target += 10;
-        }
-        if (level.isRaided(s.center())) {
-            target -= 30;
-        }
-        target -= Math.min(30, s.recentDeaths() * 10);
+        int target = Mood.target(Mood.factors(level, s));
         s.decayRecentDeaths();
-
-        s.setHappiness((int) Math.round(s.happiness() * 0.6 + Mth.clamp(target, 0, 100) * 0.4));
+        s.setHappiness((int) Math.round(s.happiness() * 0.6 + target * 0.4));
     }
 
     /** Prosperous towns attract newcomers; miserable ones lose people. */

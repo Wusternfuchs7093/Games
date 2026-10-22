@@ -20,6 +20,7 @@ public enum BuildingType {
     TOWN_HALL(1, true, Blueprints::townHall),
     WATCHTOWER(1, true, Blueprints::watchtower),
     LIBRARY(1, true, Blueprints::library),
+    HOSPITAL(1, true, Blueprints::hospital),
     LAMP(1, false, Blueprints::lamp),
     /** Ring wall around the town; laid out from the terrain, its variant is the radius. */
     WALL(1, false, (palette, variant) -> new Blueprint.Builder(1, 1, 1).build());
@@ -57,7 +58,7 @@ public enum BuildingType {
     /** Wooden buildings of these types can later be rebuilt in stone. */
     public boolean upgradable() {
         return this == HOUSE || this == WORKSHOP || this == WAREHOUSE || this == TOWN_HALL || this == LIBRARY
-                || this == WATCHTOWER;
+                || this == WATCHTOWER || this == HOSPITAL;
     }
 
     public String id() {
@@ -100,6 +101,7 @@ public enum BuildingType {
             required.put(WATCHTOWER, 4);
             required.put(WELL, 2);
             required.put(WALL, 2);
+            required.put(HOSPITAL, 1);
         }
         if (level >= SettlementTier.CAPITAL.ordinal()) {
             required.put(MARKET, 4);

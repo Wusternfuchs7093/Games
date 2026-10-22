@@ -104,6 +104,16 @@ public final class Settlement {
     private final Map<UUID, Long> truces = new HashMap<>();
     private int vassals;
 
+    // Disasters
+    private int epidemic;
+    private int sick;
+    private int drought;
+    private int recentFire;
+    @Nullable
+    private Building fire;
+    private long fireStart;
+    private final List<Building> damaged = new ArrayList<>();
+
     public Settlement(UUID id, BlockPos center, String name, ArchitectureStyle style, int potential, long foundedDay) {
         this.id = id;
         this.center = center.immutable();
@@ -340,6 +350,59 @@ public final class Settlement {
 
     public void setOverlord(@Nullable UUID overlord) {
         this.overlord = overlord;
+    }
+
+    /** Censuses the current epidemic may still last (0 = none). */
+    public int epidemic() {
+        return epidemic;
+    }
+
+    public void setEpidemic(int censuses) {
+        this.epidemic = Math.max(0, censuses);
+    }
+
+    public int sick() {
+        return sick;
+    }
+
+    public void setSick(int sick) {
+        this.sick = Math.max(0, sick);
+    }
+
+    public int drought() {
+        return drought;
+    }
+
+    public void setDrought(int censuses) {
+        this.drought = Math.max(0, censuses);
+    }
+
+    public int recentFire() {
+        return recentFire;
+    }
+
+    public void setRecentFire(int censuses) {
+        this.recentFire = Math.max(0, censuses);
+    }
+
+    /** The building on fire right now, if any. */
+    @Nullable
+    public Building fire() {
+        return fire;
+    }
+
+    public long fireStart() {
+        return fireStart;
+    }
+
+    public void setFire(@Nullable Building building, long startTick) {
+        this.fire = building;
+        this.fireStart = startTick;
+    }
+
+    /** Buildings waiting for repairs after a disaster. */
+    public List<Building> damaged() {
+        return damaged;
     }
 
     public int vassals() {
@@ -596,6 +659,18 @@ public final class Settlement {
         CompoundTag truceTag = new CompoundTag();
         truces.forEach((other, until) -> truceTag.putLong(other.toString(), until));
         tag.put("truces", truceTag);
+
+        tag.putInt("epidemic", epidemic);
+        tag.putInt("sick", sick);
+        tag.putInt("drought", drought);
+        tag.putInt("recentFire", recentFire);
+        if (fire != null) {
+            tag.put("fire", fire.save());
+            tag.putLong("fireStart", fireStart);
+        }
+        ListTag ruins = new ListTag();
+        damaged.forEach(building -> ruins.add(building.save()));
+        tag.put("damaged", ruins);
         return tag;
     }
 
@@ -702,6 +777,21 @@ public final class Settlement {
         s.researchProgress = tag.getInt("researchProgress");
         if (tag.hasUUID("overlord")) {
             s.overlord = tag.getUUID("overlord");
+        }
+        s.epidemic = tag.getInt("epidemic");
+        s.sick = tag.getInt("sick");
+        s.drought = tag.getInt("drought");
+        s.recentFire = tag.getInt("recentFire");
+        if (tag.contains("fire", Tag.TAG_COMPOUND)) {
+            s.fire = Building.load(tag.getCompound("fire"));
+            s.fireStart = tag.getLong("fireStart");
+        }
+        ListTag ruins = tag.getList("damaged", Tag.TAG_COMPOUND);
+        for (int i = 0; i < ruins.size(); i++) {
+            Building building = Building.load(ruins.getCompound(i));
+            if (building != null) {
+                s.damaged.add(building);
+            }
         }
         CompoundTag truceTag = tag.getCompound("truces");
         for (String key : truceTag.getAllKeys()) {

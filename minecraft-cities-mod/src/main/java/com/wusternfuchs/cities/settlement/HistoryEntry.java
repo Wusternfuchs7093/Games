@@ -12,7 +12,7 @@ public record HistoryEntry(long day, String key, String argument) {
             case "law_enacted", "law_repealed" -> Component.translatable("cities.law." + argument);
             case "tech" -> Component.translatable("cities.tech." + argument);
             case "era" -> Component.translatable("cities.era." + argument);
-            case "upgrade" -> Component.translatable("cities.building." + argument);
+            case "upgrade", "repair", "fire", "fire_out" -> Component.translatable("cities.building." + argument);
             case "elected" -> argument.equals("-") ? Component.translatable("cities.mayor.council") : argument;
             default -> argument;
         };

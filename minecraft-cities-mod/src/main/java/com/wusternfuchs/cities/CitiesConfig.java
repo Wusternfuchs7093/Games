@@ -111,6 +111,26 @@ public final class CitiesConfig {
             .define("allowPlayerFounding", true);
 
     static {
+        BUILDER.pop().push("disasters");
+    }
+
+    public static final ModConfigSpec.BooleanValue DISASTERS_ENABLED = BUILDER
+            .comment("If true, settlements suffer fires, epidemics and droughts.")
+            .define("enabled", true);
+
+    public static final ModConfigSpec.DoubleValue FIRE_CHANCE = BUILDER
+            .comment("Chance per census and per wooden building (up to 10) that a fire breaks out; wells divide it.")
+            .defineInRange("fireChance", 0.004, 0.0, 1.0);
+
+    public static final ModConfigSpec.DoubleValue DISEASE_CHANCE = BUILDER
+            .comment("Base chance per census that an epidemic starts; crowding, no well and hunger raise it.")
+            .defineInRange("diseaseChance", 0.004, 0.0, 1.0);
+
+    public static final ModConfigSpec.DoubleValue DROUGHT_CHANCE = BUILDER
+            .comment("Chance per census of a drought when it is not raining.")
+            .defineInRange("droughtChance", 0.003, 0.0, 1.0);
+
+    static {
         BUILDER.pop().push("display");
     }
 

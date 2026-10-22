@@ -39,6 +39,13 @@ public final class TownPlanner {
         if (!CitiesConfig.FREE_CONSTRUCTION.get() && s.materials() < MIN_MATERIALS_TO_START) {
             return;
         }
+        if (!s.damaged().isEmpty()) {
+            Building ruin = s.damaged().remove(0);
+            s.setProject(new ConstructionProject(ruin));
+            s.record(SettlementManager.day(level), "repair", ruin.type().id());
+            data.setDirty();
+            return;
+        }
         BuildingType type = choose(s);
         if (type != null) {
             start(level, data, s, type);
@@ -114,6 +121,10 @@ public final class TownPlanner {
         }
         if (s.tier().ordinal() >= SettlementTier.TOWNSHIP.ordinal() && s.count(BuildingType.LIBRARY) == 0) {
             return BuildingType.LIBRARY;
+        }
+        if (s.tier().ordinal() >= SettlementTier.TOWNSHIP.ordinal() && s.count(BuildingType.HOSPITAL) == 0
+                && (s.epidemic() > 0 || s.population() >= 30)) {
+            return BuildingType.HOSPITAL;
         }
         if (s.tier().ordinal() >= SettlementTier.SMALL_TOWN.ordinal() && !hasWallAt(s, wallRadius(s))
                 && s.count(BuildingType.WALL) < 2) {

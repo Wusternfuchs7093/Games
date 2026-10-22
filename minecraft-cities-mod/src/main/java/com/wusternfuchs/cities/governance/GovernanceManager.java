@@ -40,7 +40,6 @@ public final class GovernanceManager {
     public static final int FESTIVAL_WEALTH = 32;
     public static final int FESTIVAL_FOOD_PER_VILLAGER = 3;
     private static final int FESTIVAL_CENSUSES = 3;
-    private static final int FESTIVAL_HAPPINESS = 15;
     private static final int FESTIVAL_COOLDOWN_DAYS = 3;
     private static final int FESTIVAL_ROCKETS = 24;
     private static final int COUNCIL_SUPPORT = 40;
@@ -60,19 +59,6 @@ public final class GovernanceManager {
         return s.mayor() == null
                 ? Component.translatable("cities.mayor.council")
                 : Component.literal(s.mayorName());
-    }
-
-    /** Happiness from laws, taxes and festivities. */
-    public static int happinessModifier(Settlement s) {
-        int modifier = s.tax().happiness();
-        for (Law law : s.laws()) {
-            // A civic code explains the laws: people grumble half as much.
-            modifier += s.hasTech(Tech.CIVIC_CODE) ? law.happiness() / 2 : law.happiness();
-        }
-        if (s.festivalCensuses() > 0) {
-            modifier += FESTIVAL_HAPPINESS;
-        }
-        return modifier;
     }
 
     /** Runs once per census: impeachment, the council's policy, elections and festival countdown. */
