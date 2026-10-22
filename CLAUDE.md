@@ -92,6 +92,9 @@ Extras:
 - README has a short player guide "Как играть" (any vanilla village works; it only develops while its chunks are
   loaded). The user asked where to develop a village — they are about to start playing.
 
+- UX gap noticed by the user: delivering a job is command-only (`/city board deliver <#>`, `take <#>` for hunts);
+  offered to add per-job "Сдать" buttons on the screen's board tab — waiting for their answer.
+
 Next:
 - In-game testing and bug fixing with the user (top priority).
 - Ideas not built yet (from MECHANICS.md): JourneyMap/Xaero markers, families/inheritance, guilds, banks/loans,
