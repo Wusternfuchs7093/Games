@@ -95,6 +95,10 @@ Extras:
 - UX gap noticed by the user: delivering a job is command-only (`/city board deliver <#>`, `take <#>` for hunts);
   offered to add per-job "Сдать" buttons on the screen's board tab — waiting for their answer.
 
+- User asked how to have their own house as part of a village. Today: `/city buy` (town-built house/manor only),
+  mayor `/city order house` then buy, or build it yourself (beds/workstations count, planner avoids it, but it is
+  not registered/protected). Offered `/city claim` to register a self-built house as owned+protected — waiting.
+
 Next:
 - In-game testing and bug fixing with the user (top priority).
 - Ideas not built yet (from MECHANICS.md): JourneyMap/Xaero markers, families/inheritance, guilds, banks/loans,
