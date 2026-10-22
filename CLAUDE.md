@@ -89,6 +89,9 @@ Extras:
   "Run workflow" button with the download: point them to a finished run (green check) → Artifacts → `cities-mod-jar`.
   Get the latest run URL with `curl https://api.github.com/repos/Wusternfuchs7093/Games/actions/runs?per_page=1`.
 
+- README has a short player guide "Как играть" (any vanilla village works; it only develops while its chunks are
+  loaded). The user asked where to develop a village — they are about to start playing.
+
 Next:
 - In-game testing and bug fixing with the user (top priority).
 - Ideas not built yet (from MECHANICS.md): JourneyMap/Xaero markers, families/inheritance, guilds, banks/loans,
