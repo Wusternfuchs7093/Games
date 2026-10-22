@@ -85,7 +85,9 @@ Extras:
   scratchpad, not in the repo; to change it, read the artifact and republish to that URL).
 - The user plays with **TLauncher**. Install steps (NeoForge 1.21.1 version → jar from the Actions artifact
   `cities-mod-jar` → `%appdata%\.minecraft\mods`) are in README "Установка через TLauncher". There is no GitHub
-  release yet; the jar comes from CI artifacts (need a GitHub login, expire after 90 days).
+  release yet; the jar comes from CI artifacts (need a GitHub login, expire after 90 days). The user confused the
+  "Run workflow" button with the download: point them to a finished run (green check) → Artifacts → `cities-mod-jar`.
+  Get the latest run URL with `curl https://api.github.com/repos/Wusternfuchs7093/Games/actions/runs?per_page=1`.
 
 Next:
 - In-game testing and bug fixing with the user (top priority).
