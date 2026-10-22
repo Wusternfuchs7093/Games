@@ -19,6 +19,8 @@ import com.wusternfuchs.cities.diplomacy.Relation;
 import com.wusternfuchs.cities.governance.GovernanceManager;
 import com.wusternfuchs.cities.governance.Law;
 import com.wusternfuchs.cities.governance.TaxRate;
+import com.wusternfuchs.cities.research.ResearchManager;
+import com.wusternfuchs.cities.research.Tech;
 import com.wusternfuchs.cities.CitiesConfig;
 import com.wusternfuchs.cities.trade.Caravan;
 import com.wusternfuchs.cities.trade.TradeManager;
@@ -94,6 +96,10 @@ public final class CityCommands {
             new SimpleCommandExceptionType(Component.translatable("cities.command.cannot_afford"));
     private static final SimpleCommandExceptionType NOTHING_CHANGED =
             new SimpleCommandExceptionType(Component.translatable("cities.command.nothing_changed"));
+    private static final SimpleCommandExceptionType UNKNOWN_TECH =
+            new SimpleCommandExceptionType(Component.translatable("cities.command.unknown_tech"));
+    private static final SimpleCommandExceptionType TECH_UNAVAILABLE =
+            new SimpleCommandExceptionType(Component.translatable("cities.command.tech_unavailable"));
     private static final SimpleCommandExceptionType NOT_BUILDING =
             new SimpleCommandExceptionType(Component.translatable("cities.command.not_building"));
 
@@ -109,6 +115,9 @@ public final class CityCommands {
 
     private static final SuggestionProvider<CommandSourceStack> TAX_IDS = (ctx, builder) ->
             SharedSuggestionProvider.suggest(Arrays.stream(TaxRate.values()).map(TaxRate::id), builder);
+
+    private static final SuggestionProvider<CommandSourceStack> TECH_IDS = (ctx, builder) ->
+            SharedSuggestionProvider.suggest(Arrays.stream(Tech.values()).map(Tech::id), builder);
 
     private static final SuggestionProvider<CommandSourceStack> BUILDING_IDS = (ctx, builder) ->
             SharedSuggestionProvider.suggest(Arrays.stream(BuildingType.values()).map(BuildingType::id), builder);
@@ -198,6 +207,11 @@ public final class CityCommands {
                                 .suggests(TAX_IDS)
                                 .executes(CityCommands::tax)))
                 .then(Commands.literal("festival").executes(CityCommands::festival))
+                .then(Commands.literal("research")
+                        .executes(ctx -> research(ctx, here(ctx)))
+                        .then(Commands.argument("tech", StringArgumentType.word())
+                                .suggests(TECH_IDS)
+                                .executes(CityCommands::chooseResearch)))
                 .then(Commands.literal("treasury")
                         .then(Commands.argument("emeralds", IntegerArgumentType.integer(1, 64))
                                 .executes(CityCommands::treasury)))
@@ -284,6 +298,11 @@ public final class CityCommands {
                 s.wealth(), s.happiness()), false);
         source.sendSuccess(() -> Component.translatable("cities.info.mayor", GovernanceManager.mayorName(s),
                 s.tax().displayName(), s.laws().size()), false);
+        Tech studying = s.researching();
+        source.sendSuccess(() -> studying == null
+                ? Component.translatable("cities.info.research_none", s.era().displayName())
+                : Component.translatable("cities.info.research", s.era().displayName(), studying.displayName(),
+                        s.researchProgress(), studying.cost(), ResearchManager.pointsPerCensus(s)), false);
         source.sendSuccess(() -> Component.translatable("cities.info.territory", s.chunks().size(),
                 s.buildings().size()), false);
         ConstructionProject project = s.project();
@@ -562,6 +581,57 @@ public final class CityCommands {
         BlockPos origin = s.project().building().origin();
         ctx.getSource().sendSuccess(() -> Component.translatable("cities.command.build_started", type.displayName(),
                 origin.getX(), origin.getY(), origin.getZ()), false);
+        return 1;
+    }
+
+    private static int research(CommandContext<CommandSourceStack> ctx, Settlement s) {
+        CommandSourceStack source = ctx.getSource();
+        source.sendSuccess(() -> Component.translatable("cities.command.research.header", s.name(),
+                s.era().displayName(), ResearchManager.pointsPerCensus(s)).withStyle(ChatFormatting.GOLD), false);
+        for (Tech tech : Tech.values()) {
+            String state;
+            ChatFormatting color;
+            if (s.hasTech(tech)) {
+                state = "  ✔ ";
+                color = ChatFormatting.GREEN;
+            } else if (tech == s.researching()) {
+                state = "  ▶ ";
+                color = ChatFormatting.YELLOW;
+            } else if (ResearchManager.isAvailable(s, tech)) {
+                state = "  ○ ";
+                color = ChatFormatting.WHITE;
+            } else {
+                state = "  ✘ ";
+                color = ChatFormatting.DARK_GRAY;
+            }
+            Component progress = tech == s.researching()
+                    ? Component.literal(" [" + s.researchProgress() + "/" + tech.cost() + "]")
+                    : Component.literal(" [" + tech.cost() + "]");
+            source.sendSuccess(() -> Component.literal(state).withStyle(color)
+                    .append(tech.displayName().copy().withStyle(color))
+                    .append(Component.literal(" (" + tech.id() + ", ").withStyle(ChatFormatting.DARK_GRAY))
+                    .append(tech.era().displayName().copy().withStyle(ChatFormatting.DARK_GRAY))
+                    .append(Component.literal(")").withStyle(ChatFormatting.DARK_GRAY))
+                    .append(progress.copy().withStyle(ChatFormatting.DARK_GRAY))
+                    .append(Component.literal(": ").withStyle(ChatFormatting.DARK_GRAY))
+                    .append(tech.description().copy().withStyle(ChatFormatting.GRAY)), false);
+        }
+        return s.techs().size();
+    }
+
+    private static int chooseResearch(CommandContext<CommandSourceStack> ctx) throws CommandSyntaxException {
+        Settlement s = governed(ctx);
+        Tech tech = Tech.byId(StringArgumentType.getString(ctx, "tech"));
+        if (tech == null) {
+            throw UNKNOWN_TECH.create();
+        }
+        if (!ResearchManager.isAvailable(s, tech)) {
+            throw TECH_UNAVAILABLE.create();
+        }
+        s.setResearching(tech);
+        data(ctx).setDirty();
+        ctx.getSource().sendSuccess(() -> Component.translatable("cities.command.research_set", s.name(),
+                tech.displayName()), false);
         return 1;
     }
 

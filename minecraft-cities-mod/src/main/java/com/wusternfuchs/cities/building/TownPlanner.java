@@ -1,6 +1,7 @@
 package com.wusternfuchs.cities.building;
 
 import com.wusternfuchs.cities.CitiesConfig;
+import com.wusternfuchs.cities.research.Tech;
 import com.wusternfuchs.cities.settlement.Settlement;
 import com.wusternfuchs.cities.settlement.SettlementData;
 import com.wusternfuchs.cities.settlement.SettlementManager;
@@ -41,7 +42,25 @@ public final class TownPlanner {
         BuildingType type = choose(s);
         if (type != null) {
             start(level, data, s, type);
+        } else {
+            startUpgrade(level, data, s);
         }
+    }
+
+    /** With masonry known and nothing else to do, the oldest wooden building is rebuilt in stone. */
+    private static boolean startUpgrade(ServerLevel level, SettlementData data, Settlement s) {
+        if (!s.hasTech(Tech.MASONRY)) {
+            return false;
+        }
+        for (Building building : s.buildings()) {
+            if (!building.stone() && building.type().upgradable()) {
+                s.setProject(new ConstructionProject(building.inStone()));
+                s.record(SettlementManager.day(level), "upgrade", building.type().id());
+                data.setDirty();
+                return true;
+            }
+        }
+        return false;
     }
 
     /** Tries to start building {@code type}. Returns false if no suitable land was found. */
@@ -92,6 +111,9 @@ public final class TownPlanner {
         }
         if (s.workstations() < s.adults() && s.count(BuildingType.WORKSHOP) < 1 + s.population() / 4) {
             return BuildingType.WORKSHOP;
+        }
+        if (s.tier().ordinal() >= SettlementTier.TOWNSHIP.ordinal() && s.count(BuildingType.LIBRARY) == 0) {
+            return BuildingType.LIBRARY;
         }
         if (s.tier().ordinal() >= SettlementTier.SMALL_TOWN.ordinal() && !hasWallAt(s, wallRadius(s))
                 && s.count(BuildingType.WALL) < 2) {
@@ -154,7 +176,8 @@ public final class TownPlanner {
                         rotation, variant);
                 Integer floor = floorLevel(level, data, s, candidate, bp, palette);
                 if (floor != null) {
-                    return new Building(type, candidate.origin().atY(floor), rotation, variant);
+                    return new Building(type, candidate.origin().atY(floor), rotation, variant,
+                            s.hasTech(Tech.MASONRY));
                 }
             }
         }

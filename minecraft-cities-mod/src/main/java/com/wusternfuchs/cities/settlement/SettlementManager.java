@@ -9,6 +9,8 @@ import com.wusternfuchs.cities.defense.DefenseManager;
 import com.wusternfuchs.cities.diplomacy.DiplomacyManager;
 import com.wusternfuchs.cities.governance.GovernanceManager;
 import com.wusternfuchs.cities.governance.Law;
+import com.wusternfuchs.cities.research.ResearchManager;
+import com.wusternfuchs.cities.research.Tech;
 import com.wusternfuchs.cities.trade.TradeManager;
 import net.minecraft.ChatFormatting;
 import net.minecraft.core.BlockPos;
@@ -78,6 +80,11 @@ public final class SettlementManager {
                 if (settlement.project() != null && level.isPositionEntityTicking(settlement.center())) {
                     ConstructionManager.step(level, data, settlement);
                     if (settlement.hasLaw(Law.BUILDING_PROGRAM) && settlement.project() != null) {
+                        ConstructionManager.step(level, data, settlement);
+                    }
+                    // Architecture: one extra block every other round.
+                    boolean evenRound = (time / CitiesConfig.BUILD_INTERVAL.get()) % 2 == 0;
+                    if (settlement.hasTech(Tech.ARCHITECTURE) && evenRound && settlement.project() != null) {
                         ConstructionManager.step(level, data, settlement);
                     }
                 }
@@ -198,6 +205,7 @@ public final class SettlementManager {
         migrate(level, data, s);
         DefenseManager.updateGarrison(level, data, s);
         updateTier(level, data, s);
+        ResearchManager.research(level, data, s);
         TownPlanner.plan(level, data, s);
         DiplomacyManager.drift(level, data, s);
         TradeManager.plan(level, data, s);
@@ -215,6 +223,7 @@ public final class SettlementManager {
         int children = 0;
         int employed = 0;
         int foodProducers = 0;
+        int scholars = 0;
         for (Villager villager : level.getEntitiesOfClass(Villager.class, box, Villager::isAlive)) {
             if (data.at(villager.blockPosition()) != s) {
                 continue;
@@ -231,6 +240,9 @@ public final class SettlementManager {
             if (profession == VillagerProfession.FARMER || profession == VillagerProfession.FISHERMAN) {
                 foodProducers++;
             }
+            if (profession == VillagerProfession.LIBRARIAN || profession == VillagerProfession.CLERIC) {
+                scholars++;
+            }
         }
         int golems = level.getEntitiesOfClass(IronGolem.class, box, golem -> golem.isAlive()
                 && data.at(golem.blockPosition()) == s).size();
@@ -241,6 +253,7 @@ public final class SettlementManager {
                 PoiManager.Occupancy.ANY).count();
 
         s.applyCensus(adults, children, beds, workstations, employed, foodProducers, golems);
+        s.setScholars(scholars);
     }
 
     /**
@@ -249,12 +262,22 @@ public final class SettlementManager {
      */
     private static void runEconomy(Settlement s) {
         int produced = s.foodProducers() * 6 + s.adults() / 2;
+        if (s.hasTech(Tech.AGRICULTURE)) {
+            produced += produced / 4;
+        }
         int eaten = s.population() * CitiesConfig.FOOD_PER_VILLAGER.get();
         if (s.hasLaw(Law.RATIONING)) {
             eaten /= 2;
         }
         s.addFood(produced - eaten);
-        s.addWealth(s.tax().collect(s.employed()));
+        int taxes = s.tax().collect(s.employed());
+        if (s.hasTech(Tech.CURRENCY)) {
+            taxes += taxes / 4;
+        }
+        s.addWealth(taxes);
+        if (s.hasTech(Tech.BANKING)) {
+            s.addWealth(Math.min(20, s.wealth() / 100));
+        }
         int idle = s.adults() - s.employed();
         int gathered = s.employed() + idle * 2;
         if (s.hasLaw(Law.BUILDING_PROGRAM)) {
@@ -277,6 +300,7 @@ public final class SettlementManager {
         target += Math.min(10, s.count(BuildingType.MARKET) * 5);
         target += s.count(BuildingType.WELL) > 0 ? 5 : 0;
         target += GovernanceManager.happinessModifier(s);
+        target += s.hasTech(Tech.MEDICINE) ? 5 : 0;
         if (s.food() <= 0) {
             target -= 25;
         } else if (s.food() >= s.population() * 20) {
@@ -299,7 +323,7 @@ public final class SettlementManager {
         RandomSource random = level.getRandom();
         boolean prosperous = s.happiness() >= 60 && s.beds() > s.population() && s.food() >= s.population() * 5;
         if (prosperous && s.tier().ordinal() >= SettlementTier.VILLAGE.ordinal()
-                && random.nextDouble() < CitiesConfig.IMMIGRATION_CHANCE.get()) {
+                && random.nextDouble() < CitiesConfig.IMMIGRATION_CHANCE.get() * (s.hasTech(Tech.MEDICINE) ? 1.5 : 1.0)) {
             if (spawnImmigrant(level, s)) {
                 s.record(day(level), "immigrant", "");
             }

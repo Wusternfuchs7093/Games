@@ -2,6 +2,8 @@ package com.wusternfuchs.cities.settlement;
 
 import com.wusternfuchs.cities.CitiesConfig;
 import com.wusternfuchs.cities.building.BuildingType;
+import com.wusternfuchs.cities.research.Era;
+import com.wusternfuchs.cities.research.ResearchManager;
 import net.minecraft.ChatFormatting;
 import net.minecraft.network.chat.Component;
 
@@ -37,6 +39,11 @@ public record Requirement(Component label, int current, int required) {
         ));
         for (Map.Entry<BuildingType, Integer> entry : BuildingType.requiredFor(tier).entrySet()) {
             list.add(new Requirement(entry.getKey().displayName(), s.count(entry.getKey()), entry.getValue()));
+        }
+        Era era = ResearchManager.requiredEra(tier);
+        if (era.ordinal() > 0) {
+            list.add(new Requirement(Component.translatable("cities.requirement.era", era.displayName()),
+                    s.era().ordinal() >= era.ordinal() ? 1 : 0, 1));
         }
         return list;
     }

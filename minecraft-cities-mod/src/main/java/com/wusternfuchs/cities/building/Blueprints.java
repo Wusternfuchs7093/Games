@@ -81,6 +81,19 @@ public final class Blueprints {
         }).build();
     }
 
+    public static Blueprint library(Palette p, int variant) {
+        return hall(p, 9, 7, b -> {
+            for (int x = 1; x <= 7; x += 2) {
+                b.fill(x, 1, 1, x, 2, 1, Blocks.BOOKSHELF.defaultBlockState());
+            }
+            BlockState lectern = Blocks.LECTERN.defaultBlockState().setValue(LecternBlock.FACING, Direction.SOUTH);
+            b.set(2, 1, 3, lectern);
+            b.set(6, 1, 3, lectern);
+            b.set(1, 1, 5, Blocks.BOOKSHELF.defaultBlockState());
+            b.set(7, 1, 5, Blocks.BOOKSHELF.defaultBlockState());
+        }).build();
+    }
+
     public static Blueprint farm(Palette p, int variant) {
         Blueprint.Builder b = new Blueprint.Builder(9, 2, 9);
         b.fill(0, 0, 0, 8, 0, 8, p.pillar());

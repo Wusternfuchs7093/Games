@@ -7,6 +7,7 @@ import com.wusternfuchs.cities.diplomacy.Relation;
 import com.wusternfuchs.cities.entity.CitiesEntities;
 import com.wusternfuchs.cities.entity.Guard;
 import com.wusternfuchs.cities.governance.Law;
+import com.wusternfuchs.cities.research.Tech;
 import com.wusternfuchs.cities.settlement.Settlement;
 import com.wusternfuchs.cities.settlement.SettlementData;
 import com.wusternfuchs.cities.settlement.SettlementManager;
@@ -52,7 +53,8 @@ public final class DefenseManager {
     // ------------------------------------------------------------------ garrison
 
     public static int wantedGuards(Settlement s) {
-        int wanted = GUARDS_PER_TIER[s.tier().ordinal()] + s.count(BuildingType.WATCHTOWER);
+        int towers = s.count(BuildingType.WATCHTOWER) * (s.hasTech(Tech.ENGINEERING) ? 2 : 1);
+        int wanted = GUARDS_PER_TIER[s.tier().ordinal()] + towers;
         return s.hasLaw(Law.CONSCRIPTION) ? wanted * 2 : wanted;
     }
 
@@ -91,15 +93,21 @@ public final class DefenseManager {
         BlockPos pos = level.getHeightmapPos(Heightmap.Types.MOTION_BLOCKING_NO_LEAVES,
                 s.center().offset(random.nextInt(7) - 3, 0, random.nextInt(7) - 3));
         guard.moveTo(pos.getX() + 0.5, pos.getY(), pos.getZ() + 0.5, random.nextFloat() * 360f, 0f);
-        guard.enlist(s, s.center(), patrolRadius(s));
+        guard.enlist(s, s.center(), patrolRadius(s), gear(s));
         return level.addFreshEntity(guard) ? guard : null;
     }
 
     /** Better gear and a wider patrol after the town grows. */
     public static void refitGuards(ServerLevel level, Settlement s) {
         for (Guard guard : guardsOf(level, s)) {
-            guard.enlist(s, s.center(), patrolRadius(s));
+            guard.enlist(s, s.center(), patrolRadius(s), gear(s));
         }
+    }
+
+    /** Metallurgy arms guards like those of a town one size bigger. */
+    private static SettlementTier gear(Settlement s) {
+        SettlementTier next = s.tier().next();
+        return s.hasTech(Tech.METALLURGY) && next != null ? next : s.tier();
     }
 
     /** Guards nearby rush to defend a villager that was attacked. */

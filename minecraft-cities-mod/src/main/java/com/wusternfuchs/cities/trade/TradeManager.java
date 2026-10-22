@@ -4,6 +4,7 @@ import com.wusternfuchs.cities.CitiesConfig;
 import com.wusternfuchs.cities.building.BuildingType;
 import com.wusternfuchs.cities.diplomacy.DiplomacyManager;
 import com.wusternfuchs.cities.governance.Law;
+import com.wusternfuchs.cities.research.Tech;
 import com.wusternfuchs.cities.settlement.Settlement;
 import com.wusternfuchs.cities.settlement.SettlementData;
 import com.wusternfuchs.cities.settlement.SettlementManager;
@@ -102,14 +103,15 @@ public final class TradeManager {
             int bestAmount = 0;
             int bestPrice = 0;
             for (Settlement other : data.all()) {
-                if (other == s || other.abandoned() || other.hasLaw(Law.CLOSED_BORDERS) || !DiplomacyManager.inRange(s, other)
+                if (other == s || other.abandoned() || other.hasLaw(Law.CLOSED_BORDERS) || !inTradeRange(s, other)
                         || !DiplomacyManager.relation(s, other).allowsTrade() || isExpecting(data, other, stock)) {
                     continue;
                 }
                 int deficit = target(other, stock) - amount(other, stock);
                 double unitPrice = price(other, stock);
                 int affordable = (int) (other.wealth() / unitPrice);
-                int load = Math.min(Math.min(surplus, deficit), Math.min(BASE_LOAD * maxCaravans(s), affordable));
+                int capacity = BASE_LOAD * maxCaravans(s) * (s.hasTech(Tech.CURRENCY) ? 3 : 2) / 2;
+                int load = Math.min(Math.min(surplus, deficit), Math.min(capacity, affordable));
                 if (load < MIN_SHIPMENT) {
                     continue;
                 }
@@ -127,6 +129,12 @@ public final class TradeManager {
                 return;
             }
         }
+    }
+
+    /** Navigation doubles how far caravans travel. */
+    private static boolean inTradeRange(Settlement from, Settlement to) {
+        double range = DiplomacyManager.RANGE * (from.hasTech(Tech.NAVIGATION) ? 2.0 : 1.0);
+        return from.center().distSqr(to.center()) <= range * range;
     }
 
     private static boolean isExpecting(SettlementData data, Settlement s, Stock stock) {
@@ -185,6 +193,9 @@ public final class TradeManager {
         }
 
         double robbery = CitiesConfig.ROBBERY_CHANCE.get();
+        if (from != null && from.hasTech(Tech.NAVIGATION)) {
+            robbery /= 2;
+        }
         double chance = Mth.clamp(robbery - 0.03 * (from == null ? 0 : from.guards()), Math.min(0.02, robbery), robbery);
         if (level.getRandom().nextDouble() < chance) {
             String origin = from == null ? "?" : from.name();

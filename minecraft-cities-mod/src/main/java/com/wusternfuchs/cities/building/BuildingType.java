@@ -19,6 +19,7 @@ public enum BuildingType {
     MARKET(4, true, Blueprints::market),
     TOWN_HALL(1, true, Blueprints::townHall),
     WATCHTOWER(1, true, Blueprints::watchtower),
+    LIBRARY(1, true, Blueprints::library),
     LAMP(1, false, Blueprints::lamp),
     /** Ring wall around the town; laid out from the terrain, its variant is the radius. */
     WALL(1, false, (palette, variant) -> new Blueprint.Builder(1, 1, 1).build());
@@ -44,9 +45,19 @@ public enum BuildingType {
     }
 
     public Blueprint blueprint(ArchitectureStyle style, int variant) {
+        return blueprint(style, variant, false);
+    }
+
+    public Blueprint blueprint(ArchitectureStyle style, int variant, boolean stone) {
         int v = Math.floorMod(variant, variants);
-        return CACHE.computeIfAbsent(name() + "/" + style.name() + "/" + v,
-                key -> generator.apply(Palette.of(style), v));
+        return CACHE.computeIfAbsent(name() + "/" + style.name() + "/" + v + (stone ? "/stone" : ""),
+                key -> generator.apply(Palette.of(style, stone), v));
+    }
+
+    /** Wooden buildings of these types can later be rebuilt in stone. */
+    public boolean upgradable() {
+        return this == HOUSE || this == WORKSHOP || this == WAREHOUSE || this == TOWN_HALL || this == LIBRARY
+                || this == WATCHTOWER;
     }
 
     public String id() {
@@ -77,6 +88,7 @@ public enum BuildingType {
         if (level >= SettlementTier.SMALL_TOWN.ordinal()) {
             required.put(TOWN_HALL, 1);
             required.put(MARKET, 1);
+            required.put(LIBRARY, 1);
         }
         if (level >= SettlementTier.CITY.ordinal()) {
             required.put(MARKET, 2);

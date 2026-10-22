@@ -10,11 +10,22 @@ import net.minecraft.world.level.levelgen.structure.BoundingBox;
 
 import javax.annotation.Nullable;
 
-/** A building placed in the world: which blueprint, where its local origin is and how it is turned. */
-public record Building(BuildingType type, BlockPos origin, Rotation rotation, int variant) {
+/**
+ * A building placed in the world: which blueprint, where its local origin is and how it is turned.
+ * {@code stone} buildings use the masonry palette.
+ */
+public record Building(BuildingType type, BlockPos origin, Rotation rotation, int variant, boolean stone) {
+
+    public Building(BuildingType type, BlockPos origin, Rotation rotation, int variant) {
+        this(type, origin, rotation, variant, false);
+    }
 
     public Blueprint blueprint(ArchitectureStyle style) {
-        return type.blueprint(style, variant);
+        return type.blueprint(style, variant, stone);
+    }
+
+    public Building inStone() {
+        return new Building(type, origin, rotation, variant, true);
     }
 
     public BlockPos toWorld(BlockPos local) {
@@ -42,6 +53,7 @@ public record Building(BuildingType type, BlockPos origin, Rotation rotation, in
         tag.put("origin", NbtUtils.writeBlockPos(origin));
         tag.putString("rotation", rotation.name());
         tag.putInt("variant", variant);
+        tag.putBoolean("stone", stone);
         return tag;
     }
 
@@ -58,6 +70,6 @@ public record Building(BuildingType type, BlockPos origin, Rotation rotation, in
             rotation = Rotation.NONE;
         }
         return new Building(type, NbtUtils.readBlockPos(tag, "origin").orElse(BlockPos.ZERO), rotation,
-                tag.getInt("variant"));
+                tag.getInt("variant"), tag.getBoolean("stone"));
     }
 }

@@ -7,6 +7,7 @@ import com.wusternfuchs.cities.settlement.SettlementData;
 import com.wusternfuchs.cities.settlement.SettlementManager;
 import com.wusternfuchs.cities.settlement.SettlementTier;
 import com.wusternfuchs.cities.settlement.Stock;
+import com.wusternfuchs.cities.research.Tech;
 import net.minecraft.ChatFormatting;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
@@ -108,6 +109,9 @@ public final class ConstructionManager {
                 cost++;
             }
         }
+        if (s.hasTech(Tech.CARPENTRY) && project.placed() % 4 == 3) {
+            cost = 0; // every fourth block comes from leftovers
+        }
         boolean free = CitiesConfig.FREE_CONSTRUCTION.get();
         if (!free && s.materials() < cost) {
             if (!project.stalled()) {
@@ -163,7 +167,7 @@ public final class ConstructionManager {
 
     private static void complete(ServerLevel level, SettlementData data, Settlement s, ConstructionProject project) {
         Building building = project.building();
-        s.addBuilding(building);
+        s.replaceBuilding(building);
         s.setProject(null);
         s.record(SettlementManager.day(level), "built", building.type().id());
         if (project.builder() != null && level.getEntity(project.builder()) instanceof Villager builder) {
@@ -239,7 +243,7 @@ public final class ConstructionManager {
      */
     static List<List<Placement>> planSteps(ServerLevel level, SettlementData data, Settlement s, Building building,
                                            Blueprint bp) {
-        Palette palette = Palette.of(s.style());
+        Palette palette = Palette.of(s.style(), building.stone());
         if (building.type() == BuildingType.WALL) {
             return planWall(level, s, building, palette);
         }
@@ -312,9 +316,9 @@ public final class ConstructionManager {
         List<List<Placement>> steps = new ArrayList<>();
         BlockPos center = s.center();
         int radius = building.variant();
-        boolean stone = s.tier().ordinal() >= SettlementTier.CITY.ordinal();
+        boolean stone = s.tier().ordinal() >= SettlementTier.CITY.ordinal() || s.hasTech(Tech.MASONRY);
         BlockState wall = stone ? palette.foundation() : palette.pillar();
-        int height = stone ? 4 : 3;
+        int height = (stone ? 4 : 3) + (s.hasTech(Tech.ENGINEERING) ? 1 : 0);
 
         Set<Long> ring = new LinkedHashSet<>();
         int points = (int) Math.ceil(2 * Math.PI * radius * 2);

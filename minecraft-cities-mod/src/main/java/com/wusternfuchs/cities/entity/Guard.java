@@ -78,13 +78,13 @@ public class Guard extends PathfinderMob {
                 target -> target instanceof Enemy && !(target instanceof Creeper)));
     }
 
-    /** Assigns the guard to a settlement and equips them according to its tier. */
-    public void enlist(Settlement settlement, BlockPos post, int patrolRadius) {
+    /** Assigns the guard to a settlement and equips them as well as a town of {@code gear} tier can. */
+    public void enlist(Settlement settlement, BlockPos post, int patrolRadius, SettlementTier gear) {
         this.settlementId = settlement.id();
         this.post = post.immutable();
         this.patrolRadius = patrolRadius;
         restrictTo(this.post, this.patrolRadius);
-        equip(settlement.tier());
+        equip(gear);
     }
 
     public void equip(SettlementTier tier) {

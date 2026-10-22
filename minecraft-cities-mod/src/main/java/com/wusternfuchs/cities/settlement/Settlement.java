@@ -6,6 +6,8 @@ import com.wusternfuchs.cities.building.ConstructionProject;
 import com.wusternfuchs.cities.defense.Siege;
 import com.wusternfuchs.cities.governance.Law;
 import com.wusternfuchs.cities.governance.TaxRate;
+import com.wusternfuchs.cities.research.Era;
+import com.wusternfuchs.cities.research.Tech;
 import it.unimi.dsi.fastutil.longs.LongOpenHashSet;
 import it.unimi.dsi.fastutil.longs.LongSet;
 import it.unimi.dsi.fastutil.objects.Object2IntMap;
@@ -52,6 +54,7 @@ public final class Settlement {
     private int foodProducers;
     private int golems;
     private int guards;
+    private int scholars;
     private boolean censusDone;
 
     // Economy and mood
@@ -87,6 +90,12 @@ public final class Settlement {
     private final Map<UUID, String> candidates = new LinkedHashMap<>();
     private int festivalCensuses;
     private long lastFestivalDay = -100;
+
+    // Research
+    private final Set<Tech> techs = EnumSet.noneOf(Tech.class);
+    @Nullable
+    private Tech researching;
+    private int researchProgress;
 
     public Settlement(UUID id, BlockPos center, String name, ArchitectureStyle style, int potential, long foundedDay) {
         this.id = id;
@@ -263,6 +272,59 @@ public final class Settlement {
         this.lastFestivalDay = day;
     }
 
+    public int scholars() {
+        return scholars;
+    }
+
+    public void setScholars(int scholars) {
+        this.scholars = scholars;
+    }
+
+    public Set<Tech> techs() {
+        return techs;
+    }
+
+    public boolean hasTech(Tech tech) {
+        return techs.contains(tech);
+    }
+
+    /** The latest age reached: each needs enough technologies of the one before. */
+    public Era era() {
+        Era era = Era.FOUNDING;
+        for (Era next : Era.values()) {
+            if (next.ordinal() == 0) {
+                continue;
+            }
+            Era previous = Era.values()[next.ordinal() - 1];
+            long known = techs.stream().filter(t -> t.era() == previous).count();
+            if (era != previous || known < Era.TECHS_TO_ADVANCE) {
+                break;
+            }
+            era = next;
+        }
+        return era;
+    }
+
+    @Nullable
+    public Tech researching() {
+        return researching;
+    }
+
+    public void setResearching(@Nullable Tech tech) {
+        if (tech != researching) {
+            researchProgress = 0;
+        }
+        this.researching = tech;
+    }
+
+    public int researchProgress() {
+        return researchProgress;
+    }
+
+    public void addResearchProgress(int points) {
+        researchProgress += points;
+    }
+
     public boolean censusDone() {
         return censusDone;
     }
@@ -318,6 +380,12 @@ public final class Settlement {
     }
 
     public void addBuilding(Building building) {
+        buildings.add(building);
+    }
+
+    /** Replaces a building standing at the same spot (used when one is rebuilt in stone). */
+    public void replaceBuilding(Building building) {
+        buildings.removeIf(b -> b.type() == building.type() && b.origin().equals(building.origin()));
         buildings.add(building);
     }
 
@@ -428,6 +496,7 @@ public final class Settlement {
         tag.putInt("foodProducers", foodProducers);
         tag.putInt("golems", golems);
         tag.putInt("guards", guards);
+        tag.putInt("scholars", scholars);
         tag.putBoolean("censusDone", censusDone);
 
         tag.putInt("food", food);
@@ -478,6 +547,14 @@ public final class Settlement {
         tag.put("candidates", running);
         tag.putInt("festival", festivalCensuses);
         tag.putLong("lastFestival", lastFestivalDay);
+
+        ListTag techList = new ListTag();
+        techs.forEach(tech -> techList.add(StringTag.valueOf(tech.id())));
+        tag.put("techs", techList);
+        if (researching != null) {
+            tag.putString("researching", researching.id());
+        }
+        tag.putInt("researchProgress", researchProgress);
         return tag;
     }
 
@@ -496,6 +573,7 @@ public final class Settlement {
         s.foodProducers = tag.getInt("foodProducers");
         s.golems = tag.getInt("golems");
         s.guards = tag.getInt("guards");
+        s.scholars = tag.getInt("scholars");
         s.censusDone = tag.getBoolean("censusDone");
 
         s.food = tag.getInt("food");
@@ -572,6 +650,15 @@ public final class Settlement {
                 // Skip a corrupted entry.
             }
         }
+        ListTag techList = tag.getList("techs", Tag.TAG_STRING);
+        for (int i = 0; i < techList.size(); i++) {
+            Tech tech = Tech.byId(techList.getString(i));
+            if (tech != null) {
+                s.techs.add(tech);
+            }
+        }
+        s.researching = Tech.byId(tag.getString("researching"));
+        s.researchProgress = tag.getInt("researchProgress");
         s.festivalCensuses = tag.getInt("festival");
         if (tag.contains("lastFestival")) {
             s.lastFestivalDay = tag.getLong("lastFestival");

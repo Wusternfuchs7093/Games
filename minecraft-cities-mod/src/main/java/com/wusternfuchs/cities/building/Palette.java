@@ -20,6 +20,24 @@ public record Palette(
         BlockState pane,
         BlockState road) {
 
+    /** The masonry palette replaces wooden walls with the region's stone. */
+    public static Palette of(ArchitectureStyle style, boolean stone) {
+        Palette base = of(style);
+        if (!stone) {
+            return base;
+        }
+        BlockState walls = switch (style) {
+            case PLAINS, SNOWY -> Blocks.STONE_BRICKS.defaultBlockState();
+            case DESERT -> Blocks.CUT_SANDSTONE.defaultBlockState();
+            case SAVANNA -> Blocks.TERRACOTTA.defaultBlockState();
+            case TAIGA -> Blocks.MOSSY_STONE_BRICKS.defaultBlockState();
+            case OTHER -> Blocks.BRICKS.defaultBlockState();
+        };
+        BlockState pillar = style == ArchitectureStyle.DESERT ? Blocks.CHISELED_SANDSTONE.defaultBlockState() : base.pillar();
+        return new Palette(walls, pillar, base.floor(), base.foundation(), base.wallStairs(), base.roofStairs(),
+                base.roofSlab(), base.fence(), base.door(), base.bed(), base.pane(), base.road());
+    }
+
     public static Palette of(ArchitectureStyle style) {
         return switch (style) {
             case DESERT -> new Palette(

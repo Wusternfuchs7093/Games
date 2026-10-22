@@ -3,6 +3,7 @@ package com.wusternfuchs.cities.governance;
 import com.wusternfuchs.cities.CitiesConfig;
 import com.wusternfuchs.cities.diplomacy.DiplomacyManager;
 import com.wusternfuchs.cities.diplomacy.Relation;
+import com.wusternfuchs.cities.research.Tech;
 import com.wusternfuchs.cities.settlement.ReputationRank;
 import com.wusternfuchs.cities.settlement.Settlement;
 import com.wusternfuchs.cities.settlement.SettlementData;
@@ -65,7 +66,8 @@ public final class GovernanceManager {
     public static int happinessModifier(Settlement s) {
         int modifier = s.tax().happiness();
         for (Law law : s.laws()) {
-            modifier += law.happiness();
+            // A civic code explains the laws: people grumble half as much.
+            modifier += s.hasTech(Tech.CIVIC_CODE) ? law.happiness() / 2 : law.happiness();
         }
         if (s.festivalCensuses() > 0) {
             modifier += FESTIVAL_HAPPINESS;
