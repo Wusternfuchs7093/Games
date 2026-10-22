@@ -2,6 +2,8 @@ package com.wusternfuchs.cities;
 
 import com.wusternfuchs.cities.command.CityCommands;
 import com.wusternfuchs.cities.defense.DefenseManager;
+import com.wusternfuchs.cities.entity.Guard;
+import com.wusternfuchs.cities.war.WarManager;
 import com.wusternfuchs.cities.settlement.SettlementManager;
 import com.wusternfuchs.cities.trade.VillagerTrading;
 import net.minecraft.server.level.ServerLevel;
@@ -51,6 +53,8 @@ public final class GameEvents {
             SettlementManager.onVillagerDeath(level, villager, killer);
         } else if (event.getEntity() instanceof Raider raider) {
             DefenseManager.onRaiderDeath(level, raider, killer);
+        } else if (event.getEntity() instanceof Guard guard) {
+            WarManager.onSoldierDeath(level, guard, killer);
         }
     }
 

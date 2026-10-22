@@ -4,6 +4,7 @@ import com.wusternfuchs.cities.settlement.Settlement;
 import com.wusternfuchs.cities.settlement.SettlementData;
 import com.wusternfuchs.cities.settlement.SettlementManager;
 import com.wusternfuchs.cities.settlement.SettlementTier;
+import com.wusternfuchs.cities.war.WarManager;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
@@ -38,6 +39,9 @@ public final class DiplomacyManager {
     }
 
     static int naturalAttitude(Settlement a, Settlement b) {
+        if (a.id().equals(b.overlord()) || b.id().equals(a.overlord())) {
+            return 60; // a realm sticks together
+        }
         int attitude = a.style() == b.style() ? 20 : -5;
         boolean close = a.center().distSqr(b.center()) <= (double) RIVALRY_DISTANCE * RIVALRY_DISTANCE;
         boolean peers = Math.abs(a.tier().ordinal() - b.tier().ordinal()) <= 1;
@@ -50,7 +54,7 @@ public final class DiplomacyManager {
 
     public static void drift(ServerLevel level, SettlementData data, Settlement s) {
         for (Settlement other : data.all()) {
-            if (other == s || !inRange(s, other)) {
+            if (other == s || !inRange(s, other) || WarManager.atWar(data, s.id(), other.id())) {
                 continue;
             }
             int current = s.relation(other.id());

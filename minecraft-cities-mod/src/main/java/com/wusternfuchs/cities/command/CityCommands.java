@@ -24,6 +24,8 @@ import com.wusternfuchs.cities.research.Tech;
 import com.wusternfuchs.cities.CitiesConfig;
 import com.wusternfuchs.cities.trade.Caravan;
 import com.wusternfuchs.cities.trade.TradeManager;
+import com.wusternfuchs.cities.war.War;
+import com.wusternfuchs.cities.war.WarManager;
 import com.wusternfuchs.cities.settlement.HistoryEntry;
 import com.wusternfuchs.cities.settlement.ReputationRank;
 import com.wusternfuchs.cities.settlement.Requirement;
@@ -100,6 +102,12 @@ public final class CityCommands {
             new SimpleCommandExceptionType(Component.translatable("cities.command.unknown_tech"));
     private static final SimpleCommandExceptionType TECH_UNAVAILABLE =
             new SimpleCommandExceptionType(Component.translatable("cities.command.tech_unavailable"));
+    private static final SimpleCommandExceptionType CANNOT_DECLARE =
+            new SimpleCommandExceptionType(Component.translatable("cities.command.cannot_declare"));
+    private static final SimpleCommandExceptionType NOT_AT_WAR =
+            new SimpleCommandExceptionType(Component.translatable("cities.command.not_at_war"));
+    private static final SimpleCommandExceptionType NO_WAR_HERE =
+            new SimpleCommandExceptionType(Component.translatable("cities.command.no_war_here"));
     private static final SimpleCommandExceptionType NOT_BUILDING =
             new SimpleCommandExceptionType(Component.translatable("cities.command.not_building"));
 
@@ -148,6 +156,11 @@ public final class CityCommands {
                 .then(Commands.literal("siege").executes(CityCommands::siege))
                 .then(Commands.literal("hireguard").executes(CityCommands::hireGuard))
                 .then(Commands.literal("election").executes(CityCommands::forceElection))
+                .then(Commands.literal("war")
+                        .then(Commands.argument("name", StringArgumentType.greedyString())
+                                .suggests(SETTLEMENT_NAMES)
+                                .executes(ctx -> declareWar(ctx, true))))
+                .then(Commands.literal("battle").executes(CityCommands::forceBattle))
                 .then(Commands.literal("relation")
                         .then(Commands.argument("value", IntegerArgumentType.integer(-100, 100))
                                 .then(Commands.argument("name", StringArgumentType.greedyString())
@@ -191,6 +204,16 @@ public final class CityCommands {
                         .then(Commands.argument("name", StringArgumentType.greedyString())
                                 .executes(CityCommands::found)))
                 .then(Commands.literal("run").executes(CityCommands::run))
+                .then(Commands.literal("wars").executes(CityCommands::wars))
+                .then(Commands.literal("war")
+                        .then(Commands.literal("declare")
+                                .then(Commands.argument("name", StringArgumentType.greedyString())
+                                        .suggests(SETTLEMENT_NAMES)
+                                        .executes(ctx -> declareWar(ctx, false))))
+                        .then(Commands.literal("peace")
+                                .then(Commands.argument("name", StringArgumentType.greedyString())
+                                        .suggests(SETTLEMENT_NAMES)
+                                        .executes(CityCommands::peace))))
                 .then(Commands.literal("resign").executes(CityCommands::resign))
                 .then(Commands.literal("laws")
                         .executes(ctx -> laws(ctx, here(ctx)))
@@ -298,6 +321,19 @@ public final class CityCommands {
                 s.wealth(), s.happiness()), false);
         source.sendSuccess(() -> Component.translatable("cities.info.mayor", GovernanceManager.mayorName(s),
                 s.tax().displayName(), s.laws().size()), false);
+        Settlement lord = data(ctx).byId(s.overlord());
+        if (lord != null || s.vassals() > 0) {
+            source.sendSuccess(() -> lord != null
+                    ? Component.translatable("cities.info.vassal_of", lord.name(), s.vassals())
+                    : Component.translatable("cities.info.realm", s.vassals()), false);
+        }
+        for (War war : WarManager.warsOf(data(ctx), s)) {
+            boolean attacking = war.attacker().equals(s.id());
+            Settlement enemy = data(ctx).byId(attacking ? war.defender() : war.attacker());
+            int ourScore = attacking ? war.score() : -war.score();
+            source.sendSuccess(() -> Component.translatable("cities.info.war", enemy == null ? "?" : enemy.name(),
+                    ourScore).withStyle(ChatFormatting.RED), false);
+        }
         Tech studying = s.researching();
         source.sendSuccess(() -> studying == null
                 ? Component.translatable("cities.info.research_none", s.era().displayName())
@@ -633,6 +669,67 @@ public final class CityCommands {
         ctx.getSource().sendSuccess(() -> Component.translatable("cities.command.research_set", s.name(),
                 tech.displayName()), false);
         return 1;
+    }
+
+    private static int wars(CommandContext<CommandSourceStack> ctx) {
+        CommandSourceStack source = ctx.getSource();
+        SettlementData data = data(ctx);
+        if (data.wars().isEmpty()) {
+            source.sendSuccess(() -> Component.translatable("cities.command.wars.none"), false);
+            return 0;
+        }
+        source.sendSuccess(() -> Component.translatable("cities.command.wars.header").withStyle(ChatFormatting.GOLD), false);
+        for (War war : data.wars()) {
+            Settlement attacker = data.byId(war.attacker());
+            Settlement defender = data.byId(war.defender());
+            source.sendSuccess(() -> Component.translatable("cities.command.wars.entry",
+                    attacker == null ? "?" : attacker.name(), defender == null ? "?" : defender.name(), war.score(),
+                    war.battleInProgress() ? Component.translatable("cities.command.wars.battle") : Component.empty()),
+                    false);
+        }
+        return data.wars().size();
+    }
+
+    /** A mayor (or an operator with {@code force}) declares war on another settlement. */
+    private static int declareWar(CommandContext<CommandSourceStack> ctx, boolean force) throws CommandSyntaxException {
+        Settlement s = force ? inside(ctx) : governed(ctx);
+        Settlement enemy = named(ctx);
+        ServerLevel level = ctx.getSource().getLevel();
+        SettlementData data = data(ctx);
+        boolean allowed = force ? enemy != s && !WarManager.atWar(data, s.id(), enemy.id())
+                : WarManager.canDeclare(level, data, s, enemy);
+        if (!allowed) {
+            throw CANNOT_DECLARE.create();
+        }
+        WarManager.declare(level, data, s, enemy);
+        return 1;
+    }
+
+    private static int peace(CommandContext<CommandSourceStack> ctx) throws CommandSyntaxException {
+        Settlement s = governed(ctx);
+        Settlement enemy = named(ctx);
+        War war = WarManager.warBetween(data(ctx), s.id(), enemy.id());
+        if (war == null) {
+            throw NOT_AT_WAR.create();
+        }
+        WarManager.makePeace(ctx.getSource().getLevel(), data(ctx), war, false);
+        return 1;
+    }
+
+    private static int forceBattle(CommandContext<CommandSourceStack> ctx) throws CommandSyntaxException {
+        Settlement s = inside(ctx);
+        SettlementData data = data(ctx);
+        for (War war : WarManager.warsOf(data, s)) {
+            if (!war.battleInProgress()) {
+                Settlement attacker = data.byId(war.attacker());
+                Settlement defender = data.byId(war.defender());
+                if (attacker != null && defender != null) {
+                    WarManager.launchBattle(ctx.getSource().getLevel(), data, war, attacker, defender);
+                    return 1;
+                }
+            }
+        }
+        throw NO_WAR_HERE.create();
     }
 
     private static int forceElection(CommandContext<CommandSourceStack> ctx) throws CommandSyntaxException {

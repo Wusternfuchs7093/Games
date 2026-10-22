@@ -12,6 +12,7 @@ import com.wusternfuchs.cities.governance.Law;
 import com.wusternfuchs.cities.research.ResearchManager;
 import com.wusternfuchs.cities.research.Tech;
 import com.wusternfuchs.cities.trade.TradeManager;
+import com.wusternfuchs.cities.war.WarManager;
 import net.minecraft.ChatFormatting;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;
@@ -96,6 +97,9 @@ public final class SettlementManager {
                 if (settlement.siege() != null && level.isPositionEntityTicking(settlement.center())) {
                     DefenseManager.tickSiege(level, data, settlement);
                 }
+            }
+            if (CitiesConfig.WARS_ENABLED.get()) {
+                WarManager.tick(level, data);
             }
         }
         if (time % FESTIVAL_TICK_INTERVAL == 0) {
@@ -204,6 +208,8 @@ public final class SettlementManager {
         updateHappiness(level, s);
         migrate(level, data, s);
         DefenseManager.updateGarrison(level, data, s);
+        s.setVassals(WarManager.vassals(data, s));
+        WarManager.update(level, data, s);
         updateTier(level, data, s);
         ResearchManager.research(level, data, s);
         TownPlanner.plan(level, data, s);

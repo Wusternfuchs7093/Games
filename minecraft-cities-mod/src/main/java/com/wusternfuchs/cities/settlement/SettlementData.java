@@ -1,6 +1,7 @@
 package com.wusternfuchs.cities.settlement;
 
 import com.wusternfuchs.cities.trade.Caravan;
+import com.wusternfuchs.cities.war.War;
 import it.unimi.dsi.fastutil.longs.Long2ObjectMap;
 import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap;
 import net.minecraft.core.BlockPos;
@@ -29,6 +30,7 @@ public final class SettlementData extends SavedData {
     private final Map<UUID, Settlement> settlements = new LinkedHashMap<>();
     private final Long2ObjectMap<UUID> chunkOwners = new Long2ObjectOpenHashMap<>();
     private final List<Caravan> caravans = new ArrayList<>();
+    private final List<War> wars = new ArrayList<>();
 
     public static SettlementData get(ServerLevel level) {
         return level.getDataStorage().computeIfAbsent(FACTORY, FILE_NAME);
@@ -91,10 +93,19 @@ public final class SettlementData extends SavedData {
         releaseTerritory(settlement);
         settlements.remove(settlement.id());
         caravans.removeIf(c -> c.from().equals(settlement.id()) || c.to().equals(settlement.id()));
+        wars.removeIf(w -> w.involves(settlement.id()));
         for (Settlement other : settlements.values()) {
             other.forgetRelation(settlement.id());
+            if (settlement.id().equals(other.overlord())) {
+                other.setOverlord(null);
+            }
         }
         setDirty();
+    }
+
+    /** Wars being fought in this dimension. */
+    public List<War> wars() {
+        return wars;
     }
 
     /** Caravans currently on the road in this dimension. */
@@ -142,6 +153,9 @@ public final class SettlementData extends SavedData {
         ListTag roads = new ListTag();
         caravans.forEach(c -> roads.add(c.save()));
         tag.put("caravans", roads);
+        ListTag fronts = new ListTag();
+        wars.forEach(w -> fronts.add(w.save()));
+        tag.put("wars", fronts);
         return tag;
     }
 
@@ -160,6 +174,13 @@ public final class SettlementData extends SavedData {
             Caravan caravan = Caravan.load(roads.getCompound(i));
             if (caravan != null) {
                 data.caravans.add(caravan);
+            }
+        }
+        ListTag fronts = tag.getList("wars", Tag.TAG_COMPOUND);
+        for (int i = 0; i < fronts.size(); i++) {
+            War war = War.load(fronts.getCompound(i));
+            if (war != null) {
+                data.wars.add(war);
             }
         }
         return data;

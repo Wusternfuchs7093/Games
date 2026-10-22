@@ -25,6 +25,7 @@ import javax.annotation.Nullable;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.EnumSet;
+import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -96,6 +97,12 @@ public final class Settlement {
     @Nullable
     private Tech researching;
     private int researchProgress;
+
+    // Realm
+    @Nullable
+    private UUID overlord;
+    private final Map<UUID, Long> truces = new HashMap<>();
+    private int vassals;
 
     public Settlement(UUID id, BlockPos center, String name, ArchitectureStyle style, int potential, long foundedDay) {
         this.id = id;
@@ -323,6 +330,33 @@ public final class Settlement {
 
     public void addResearchProgress(int points) {
         researchProgress += points;
+    }
+
+    /** The settlement this one pays tribute to, if it lost a war. */
+    @Nullable
+    public UUID overlord() {
+        return overlord;
+    }
+
+    public void setOverlord(@Nullable UUID overlord) {
+        this.overlord = overlord;
+    }
+
+    public int vassals() {
+        return vassals;
+    }
+
+    public void setVassals(int vassals) {
+        this.vassals = vassals;
+    }
+
+    /** Day until which no war may be declared between the two settlements. */
+    public long truceUntil(UUID other) {
+        return truces.getOrDefault(other, -1L);
+    }
+
+    public void setTruce(UUID other, long untilDay) {
+        truces.put(other, untilDay);
     }
 
     public boolean censusDone() {
@@ -555,6 +589,13 @@ public final class Settlement {
             tag.putString("researching", researching.id());
         }
         tag.putInt("researchProgress", researchProgress);
+
+        if (overlord != null) {
+            tag.putUUID("overlord", overlord);
+        }
+        CompoundTag truceTag = new CompoundTag();
+        truces.forEach((other, until) -> truceTag.putLong(other.toString(), until));
+        tag.put("truces", truceTag);
         return tag;
     }
 
@@ -659,6 +700,17 @@ public final class Settlement {
         }
         s.researching = Tech.byId(tag.getString("researching"));
         s.researchProgress = tag.getInt("researchProgress");
+        if (tag.hasUUID("overlord")) {
+            s.overlord = tag.getUUID("overlord");
+        }
+        CompoundTag truceTag = tag.getCompound("truces");
+        for (String key : truceTag.getAllKeys()) {
+            try {
+                s.truces.put(UUID.fromString(key), truceTag.getLong(key));
+            } catch (IllegalArgumentException ignored) {
+                // Skip a corrupted entry.
+            }
+        }
         s.festivalCensuses = tag.getInt("festival");
         if (tag.contains("lastFestival")) {
             s.lastFestivalDay = tag.getLong("lastFestival");

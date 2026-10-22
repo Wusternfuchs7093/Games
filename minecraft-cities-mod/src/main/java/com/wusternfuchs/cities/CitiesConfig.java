@@ -78,6 +78,10 @@ public final class CitiesConfig {
             .comment("If true, bands of raiders attack settlements at night while a player is inside.")
             .define("siegesEnabled", true);
 
+    public static final ModConfigSpec.BooleanValue WARS_ENABLED = BUILDER
+            .comment("If true, hostile settlements wage wars and the losers become vassals.")
+            .define("warsEnabled", true);
+
     public static final ModConfigSpec.DoubleValue SIEGE_CHANCE = BUILDER
             .comment("Chance per night-time census and per settlement tier that a siege starts.")
             .defineInRange("siegeChancePerTier", 0.01, 0.0, 1.0);

@@ -65,7 +65,7 @@ public final class DefenseManager {
     public static List<Guard> guardsOf(ServerLevel level, Settlement s) {
         int radius = (s.tier().radiusChunks() + 2) * 16;
         return level.getEntitiesOfClass(Guard.class, new AABB(s.center()).inflate(radius, 64, radius),
-                guard -> guard.isAlive() && s.id().equals(guard.settlementId()));
+                guard -> guard.isAlive() && !guard.isSoldier() && s.id().equals(guard.settlementId()));
     }
 
     /** Counts the guards, pays their wages and hires one more if the town needs and can afford it. */

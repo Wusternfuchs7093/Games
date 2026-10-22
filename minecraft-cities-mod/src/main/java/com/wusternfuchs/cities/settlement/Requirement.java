@@ -40,6 +40,9 @@ public record Requirement(Component label, int current, int required) {
         for (Map.Entry<BuildingType, Integer> entry : BuildingType.requiredFor(tier).entrySet()) {
             list.add(new Requirement(entry.getKey().displayName(), s.count(entry.getKey()), entry.getValue()));
         }
+        if (tier == SettlementTier.CAPITAL) {
+            list.add(new Requirement(Component.translatable("cities.requirement.vassals"), s.vassals(), 2));
+        }
         Era era = ResearchManager.requiredEra(tier);
         if (era.ordinal() > 0) {
             list.add(new Requirement(Component.translatable("cities.requirement.era", era.displayName()),

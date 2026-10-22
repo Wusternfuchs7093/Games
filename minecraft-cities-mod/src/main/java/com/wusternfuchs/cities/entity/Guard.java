@@ -4,6 +4,9 @@ import com.wusternfuchs.cities.settlement.ReputationRank;
 import com.wusternfuchs.cities.settlement.Settlement;
 import com.wusternfuchs.cities.settlement.SettlementData;
 import com.wusternfuchs.cities.settlement.SettlementTier;
+import com.wusternfuchs.cities.war.WarManager;
+import net.minecraft.network.chat.Component;
+import net.minecraft.world.entity.Entity;
 import net.minecraft.core.BlockPos;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.NbtUtils;
@@ -35,6 +38,7 @@ import net.minecraft.world.item.Items;
 import net.minecraft.world.level.Level;
 
 import javax.annotation.Nullable;
+import java.util.Objects;
 import java.util.UUID;
 
 /** A town guard: patrols the settlement, fights monsters and raiders, and attacks outlaws on sight. */
@@ -45,6 +49,8 @@ public class Guard extends PathfinderMob {
     private UUID settlementId;
     private BlockPos post = BlockPos.ZERO;
     private int patrolRadius = 32;
+    /** Soldiers are sent to fight another town; they go home (vanish) when the battle ends. */
+    private boolean soldier;
 
     public Guard(EntityType<? extends Guard> type, Level level) {
         super(type, level);
@@ -73,6 +79,7 @@ public class Guard extends PathfinderMob {
 
         targetSelector.addGoal(1, new HurtByTargetGoal(this, Guard.class, IronGolem.class, AbstractVillager.class)
                 .setAlertOthers(Guard.class));
+        targetSelector.addGoal(2, new NearestAttackableTargetGoal<>(this, Guard.class, 5, false, false, this::isEnemyGuard));
         targetSelector.addGoal(2, new NearestAttackableTargetGoal<>(this, Player.class, 10, true, false, this::isOutlaw));
         targetSelector.addGoal(3, new NearestAttackableTargetGoal<>(this, Mob.class, 5, false, false,
                 target -> target instanceof Enemy && !(target instanceof Creeper)));
@@ -85,6 +92,34 @@ public class Guard extends PathfinderMob {
         this.patrolRadius = patrolRadius;
         restrictTo(this.post, this.patrolRadius);
         equip(gear);
+    }
+
+    /** Sends the guard to war: they march on {@code target} and fight whoever defends it. */
+    public void enlistSoldier(Settlement settlement, BlockPos target, SettlementTier gear) {
+        enlist(settlement, target, 12, gear);
+        this.soldier = true;
+        setCustomName(Component.translatable("cities.war.soldier", settlement.name()));
+    }
+
+    public boolean isSoldier() {
+        return soldier;
+    }
+
+    /** Guards of the same town never fight each other, and do not rally against each other either. */
+    @Override
+    public boolean isAlliedTo(Entity entity) {
+        if (entity instanceof Guard other && settlementId != null && Objects.equals(other.settlementId, settlementId)) {
+            return true;
+        }
+        return super.isAlliedTo(entity);
+    }
+
+    private boolean isEnemyGuard(LivingEntity entity) {
+        if (!(entity instanceof Guard other) || settlementId == null || other.settlementId == null
+                || !(level() instanceof ServerLevel serverLevel)) {
+            return false;
+        }
+        return WarManager.atWar(SettlementData.get(serverLevel), settlementId, other.settlementId);
     }
 
     public void equip(SettlementTier tier) {
@@ -142,6 +177,7 @@ public class Guard extends PathfinderMob {
         }
         tag.put("Post", NbtUtils.writeBlockPos(post));
         tag.putInt("PatrolRadius", patrolRadius);
+        tag.putBoolean("Soldier", soldier);
     }
 
     @Override
@@ -150,6 +186,7 @@ public class Guard extends PathfinderMob {
         settlementId = tag.hasUUID("Settlement") ? tag.getUUID("Settlement") : null;
         post = NbtUtils.readBlockPos(tag, "Post").orElse(blockPosition());
         patrolRadius = tag.contains("PatrolRadius") ? tag.getInt("PatrolRadius") : 32;
+        soldier = tag.getBoolean("Soldier");
         restrictTo(post, patrolRadius);
     }
 }
