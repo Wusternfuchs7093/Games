@@ -51,6 +51,22 @@ public final class CitiesConfig {
             .define("allowEmigration", true);
 
     static {
+        BUILDER.pop().push("construction");
+    }
+
+    public static final ModConfigSpec.BooleanValue CONSTRUCTION_ENABLED = BUILDER
+            .comment("If false, settlements never build anything.")
+            .define("enabled", true);
+
+    public static final ModConfigSpec.IntValue BUILD_INTERVAL = BUILDER
+            .comment("Ticks between two blocks placed by a builder. Lower is faster.")
+            .defineInRange("buildIntervalTicks", 10, 1, 200);
+
+    public static final ModConfigSpec.BooleanValue FREE_CONSTRUCTION = BUILDER
+            .comment("If true, building does not use up the settlement's materials.")
+            .define("freeConstruction", false);
+
+    static {
         BUILDER.pop().push("display");
     }
 

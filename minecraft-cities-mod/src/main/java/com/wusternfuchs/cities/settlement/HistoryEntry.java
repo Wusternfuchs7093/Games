@@ -6,9 +6,11 @@ import net.minecraft.network.chat.Component;
 /** One line of a settlement's chronicle, e.g. "Day 112: grew into a Town". */
 public record HistoryEntry(long day, String key, String argument) {
     public Component describe() {
-        Object arg = key.equals("promoted") || key.equals("demoted")
-                ? Component.translatable("cities.tier." + argument)
-                : argument;
+        Object arg = switch (key) {
+            case "promoted", "demoted" -> Component.translatable("cities.tier." + argument);
+            case "construction", "built" -> Component.translatable("cities.building." + argument);
+            default -> argument;
+        };
         return Component.translatable("cities.history.line", day,
                 Component.translatable("cities.history." + key, arg));
     }

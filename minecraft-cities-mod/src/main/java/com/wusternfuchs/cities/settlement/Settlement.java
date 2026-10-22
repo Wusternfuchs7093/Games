@@ -1,5 +1,8 @@
 package com.wusternfuchs.cities.settlement;
 
+import com.wusternfuchs.cities.building.Building;
+import com.wusternfuchs.cities.building.BuildingType;
+import com.wusternfuchs.cities.building.ConstructionProject;
 import it.unimi.dsi.fastutil.longs.LongOpenHashSet;
 import it.unimi.dsi.fastutil.longs.LongSet;
 import it.unimi.dsi.fastutil.objects.Object2IntMap;
@@ -12,6 +15,7 @@ import net.minecraft.nbt.Tag;
 import net.minecraft.util.Mth;
 import net.minecraft.world.level.ChunkPos;
 
+import javax.annotation.Nullable;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -44,6 +48,7 @@ public final class Settlement {
     // Economy and mood
     private int food;
     private int wealth;
+    private int materials;
     private int happiness = 50;
     private int recentDeaths;
 
@@ -55,6 +60,9 @@ public final class Settlement {
     private final LongSet chunks = new LongOpenHashSet();
     private final Object2IntMap<UUID> reputation = new Object2IntOpenHashMap<>();
     private final List<HistoryEntry> history = new ArrayList<>();
+    private final List<Building> buildings = new ArrayList<>();
+    @Nullable
+    private ConstructionProject project;
 
     public Settlement(UUID id, BlockPos center, String name, ArchitectureStyle style, int potential, long foundedDay) {
         this.id = id;
@@ -178,6 +186,41 @@ public final class Settlement {
         wealth = Math.max(0, wealth + amount);
     }
 
+    public int materials() {
+        return materials;
+    }
+
+    public void addMaterials(int amount) {
+        materials = Math.max(0, materials + amount);
+    }
+
+    public List<Building> buildings() {
+        return Collections.unmodifiableList(buildings);
+    }
+
+    public int count(BuildingType type) {
+        int count = 0;
+        for (Building building : buildings) {
+            if (building.type() == type) {
+                count++;
+            }
+        }
+        return count;
+    }
+
+    public void addBuilding(Building building) {
+        buildings.add(building);
+    }
+
+    @Nullable
+    public ConstructionProject project() {
+        return project;
+    }
+
+    public void setProject(@Nullable ConstructionProject project) {
+        this.project = project;
+    }
+
     public int happiness() {
         return happiness;
     }
@@ -266,6 +309,7 @@ public final class Settlement {
 
         tag.putInt("food", food);
         tag.putInt("wealth", wealth);
+        tag.putInt("materials", materials);
         tag.putInt("happiness", happiness);
         tag.putInt("recentDeaths", recentDeaths);
         tag.putInt("decline", decline);
@@ -281,6 +325,13 @@ public final class Settlement {
         ListTag log = new ListTag();
         history.forEach(entry -> log.add(entry.save()));
         tag.put("history", log);
+
+        ListTag built = new ListTag();
+        buildings.forEach(building -> built.add(building.save()));
+        tag.put("buildings", built);
+        if (project != null) {
+            tag.put("project", project.save());
+        }
         return tag;
     }
 
@@ -302,6 +353,7 @@ public final class Settlement {
 
         s.food = tag.getInt("food");
         s.wealth = tag.getInt("wealth");
+        s.materials = tag.getInt("materials");
         s.happiness = tag.getInt("happiness");
         s.recentDeaths = tag.getInt("recentDeaths");
         s.decline = tag.getInt("decline");
@@ -324,6 +376,17 @@ public final class Settlement {
         ListTag log = tag.getList("history", Tag.TAG_COMPOUND);
         for (int i = 0; i < log.size(); i++) {
             s.history.add(HistoryEntry.load(log.getCompound(i)));
+        }
+
+        ListTag built = tag.getList("buildings", Tag.TAG_COMPOUND);
+        for (int i = 0; i < built.size(); i++) {
+            Building building = Building.load(built.getCompound(i));
+            if (building != null) {
+                s.buildings.add(building);
+            }
+        }
+        if (tag.contains("project", Tag.TAG_COMPOUND)) {
+            s.project = ConstructionProject.load(tag.getCompound("project"));
         }
         return s;
     }

@@ -1,0 +1,95 @@
+package com.wusternfuchs.cities.building;
+
+import com.wusternfuchs.cities.settlement.ArchitectureStyle;
+import com.wusternfuchs.cities.settlement.SettlementTier;
+import net.minecraft.network.chat.Component;
+
+import java.util.EnumMap;
+import java.util.HashMap;
+import java.util.Locale;
+import java.util.Map;
+import java.util.function.BiFunction;
+
+public enum BuildingType {
+    HOUSE(2, true, Blueprints::house),
+    FARM(4, true, Blueprints::farm),
+    WAREHOUSE(1, true, Blueprints::warehouse),
+    WORKSHOP(Blueprints.workstationVariants(), true, Blueprints::workshop),
+    WELL(1, true, Blueprints::well),
+    MARKET(4, true, Blueprints::market),
+    TOWN_HALL(1, true, Blueprints::townHall),
+    WATCHTOWER(1, true, Blueprints::watchtower),
+    LAMP(1, false, Blueprints::lamp);
+
+    private static final Map<String, Blueprint> CACHE = new HashMap<>();
+
+    private final int variants;
+    private final boolean hasRoad;
+    private final BiFunction<Palette, Integer, Blueprint> generator;
+
+    BuildingType(int variants, boolean hasRoad, BiFunction<Palette, Integer, Blueprint> generator) {
+        this.variants = variants;
+        this.hasRoad = hasRoad;
+        this.generator = generator;
+    }
+
+    public int variants() {
+        return variants;
+    }
+
+    public boolean hasRoad() {
+        return hasRoad;
+    }
+
+    public Blueprint blueprint(ArchitectureStyle style, int variant) {
+        int v = Math.floorMod(variant, variants);
+        return CACHE.computeIfAbsent(name() + "/" + style.name() + "/" + v,
+                key -> generator.apply(Palette.of(style), v));
+    }
+
+    public String id() {
+        return name().toLowerCase(Locale.ROOT);
+    }
+
+    public Component displayName() {
+        return Component.translatable("cities.building." + id());
+    }
+
+    public static BuildingType byId(String id) {
+        for (BuildingType type : values()) {
+            if (type.id().equalsIgnoreCase(id)) {
+                return type;
+            }
+        }
+        return null;
+    }
+
+    /** Public buildings a settlement must own before it may reach {@code tier}. */
+    public static Map<BuildingType, Integer> requiredFor(SettlementTier tier) {
+        Map<BuildingType, Integer> required = new EnumMap<>(BuildingType.class);
+        int level = tier.ordinal();
+        if (level >= SettlementTier.TOWNSHIP.ordinal()) {
+            required.put(WAREHOUSE, 1);
+            required.put(WELL, 1);
+        }
+        if (level >= SettlementTier.SMALL_TOWN.ordinal()) {
+            required.put(TOWN_HALL, 1);
+            required.put(MARKET, 1);
+        }
+        if (level >= SettlementTier.CITY.ordinal()) {
+            required.put(MARKET, 2);
+            required.put(WATCHTOWER, 2);
+        }
+        if (level >= SettlementTier.METROPOLIS.ordinal()) {
+            required.put(MARKET, 3);
+            required.put(WATCHTOWER, 4);
+            required.put(WELL, 2);
+        }
+        if (level >= SettlementTier.CAPITAL.ordinal()) {
+            required.put(MARKET, 4);
+            required.put(WATCHTOWER, 6);
+            required.put(WAREHOUSE, 2);
+        }
+        return required;
+    }
+}

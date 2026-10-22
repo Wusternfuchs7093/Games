@@ -2,6 +2,9 @@ package com.wusternfuchs.cities.settlement;
 
 import com.wusternfuchs.cities.CitiesConfig;
 import com.wusternfuchs.cities.CitiesMod;
+import com.wusternfuchs.cities.building.BuildingType;
+import com.wusternfuchs.cities.building.ConstructionManager;
+import com.wusternfuchs.cities.building.TownPlanner;
 import net.minecraft.ChatFormatting;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;
@@ -42,6 +45,7 @@ public final class SettlementManager {
     private static final int DEMOTE_AFTER_DECLINING_CENSUSES = 3;
     private static final int REPUTATION_KILL_VILLAGER = -25;
     private static final int STARTING_FOOD = 50;
+    private static final int STARTING_MATERIALS = 64;
 
     /** Settlement each online player stood in last time we checked, for enter/leave titles. */
     private static final Map<UUID, UUID> PLAYER_LOCATIONS = new HashMap<>();
@@ -59,6 +63,14 @@ public final class SettlementManager {
         long time = level.getGameTime();
         if (time % CitiesConfig.DETECTION_INTERVAL.get() == 0) {
             detectVillages(level);
+        }
+        if (CitiesConfig.CONSTRUCTION_ENABLED.get() && time % CitiesConfig.BUILD_INTERVAL.get() == 0) {
+            SettlementData data = SettlementData.get(level);
+            for (Settlement settlement : new ArrayList<>(data.all())) {
+                if (settlement.project() != null && level.isPositionEntityTicking(settlement.center())) {
+                    ConstructionManager.step(level, data, settlement);
+                }
+            }
         }
         if (time % CitiesConfig.CENSUS_INTERVAL.get() == 0) {
             SettlementData data = SettlementData.get(level);
@@ -108,6 +120,7 @@ public final class SettlementManager {
                 rollPotential(level, center, style, random), day(level));
         settlement.record(day(level), "founded", finalName);
         settlement.addFood(STARTING_FOOD);
+        settlement.addMaterials(STARTING_MATERIALS);
         data.add(settlement);
         census(level, data, settlement);
         CitiesMod.LOGGER.info("Registered settlement {} at {} (potential {})", finalName, center, settlement.potential());
@@ -153,10 +166,12 @@ public final class SettlementManager {
 
     public static void simulate(ServerLevel level, SettlementData data, Settlement s) {
         census(level, data, s);
+        ConstructionManager.collectStorage(level, s);
         runEconomy(s);
         updateHappiness(level, s);
         migrate(level, data, s);
         updateTier(level, data, s);
+        TownPlanner.plan(level, data, s);
         data.setDirty();
     }
 
@@ -198,11 +213,16 @@ public final class SettlementManager {
         s.applyCensus(adults, children, beds, workstations, employed, foodProducers, golems);
     }
 
-    /** Workers produce, everybody eats. Farmers and fishermen feed the town, other adults forage a little. */
+    /**
+     * Workers produce, everybody eats. Farmers and fishermen feed the town, other adults forage a little.
+     * Craftsmen earn wealth; everyone gathers wood and stone, idle hands more so.
+     */
     private static void runEconomy(Settlement s) {
         int produced = s.foodProducers() * 6 + s.adults() / 2;
         s.addFood(produced - s.population() * CitiesConfig.FOOD_PER_VILLAGER.get());
         s.addWealth(s.employed());
+        int idle = s.adults() - s.employed();
+        s.addMaterials(s.employed() + idle * 2);
     }
 
     private static void updateHappiness(ServerLevel level, Settlement s) {
@@ -213,6 +233,9 @@ public final class SettlementManager {
             target += (int) Math.round(15.0 * s.employed() / s.adults()) - 5;
         }
         target += Math.min(10, s.golems() * 5);
+        target += Math.min(9, s.count(BuildingType.WATCHTOWER) * 3);
+        target += Math.min(10, s.count(BuildingType.MARKET) * 5);
+        target += s.count(BuildingType.WELL) > 0 ? 5 : 0;
         if (s.food() <= 0) {
             target -= 25;
         } else if (s.food() >= s.population() * 20) {
