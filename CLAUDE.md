@@ -107,6 +107,9 @@ Extras:
   mayor `/city order warehouse`, op `/city admin build warehouse`. Player-placed chests do not count — only the
   warehouse blueprint's chests are storage. Possible future feature: let players designate their own chests.
 
+- Explained "wealth" (treasury, 9 per emerald; sources/sinks; tier thresholds 256/1024/4096/16384/65536).
+  If the user finds high tiers' wealth requirements too steep in play, lower them in `SettlementTier`.
+
 Next:
 - In-game testing and bug fixing with the user (top priority).
 - Ideas not built yet (from MECHANICS.md): JourneyMap/Xaero markers, families/inheritance, guilds, banks/loans,
