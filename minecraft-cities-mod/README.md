@@ -218,6 +218,47 @@
 - **`/city borders`** — включает и выключает подсветку границ территории зелёными искрами (в радиусе 4 чанков от вас).
 - **`/city chronicle`** — с книгой в руке превращает её в подписанную книгу: титульная страница и летопись города, по 6 событий на страницу.
 
+## Этап 13 — датапаки, мультиплеер, API
+
+### Свои здания через датапак
+1. Постройте здание в мире. Дверь — на южной стороне (+Z), нижний слой — пол.
+2. Сохраните его структурным блоком, например под именем `mypack:fancy_house`. Файл появится в `<мир>/generated/mypack/structures/fancy_house.nbt`.
+3. Положите его в датапак: `data/mypack/structure/fancy_house.nbt`.
+4. Рядом создайте описание `data/mypack/cities/buildings/fancy_house.json`:
+```json
+{
+  "building": "house",
+  "structure": "mypack:fancy_house",
+  "cultures": ["plains", "taiga"],
+  "entrance": [3, 7],
+  "storage": false
+}
+```
+   - `building` — тип здания: house, farm, warehouse, workshop, well, market, town_hall, watchtower, library, hospital, manor, cemetery, tavern, lamp.
+   - `cultures` — для каких культур (plains, desert, savanna, snowy, taiga, other); если поле не указано, здание доступно всем культурам.
+   - `entrance` — клетка перед дверью в локальных координатах x, z; по умолчанию середина южной стороны.
+   - `storage: true` — сундуки становятся городским складом (у складов это включено всегда).
+5. `/reload`. Поселения начнут выбирать ваше здание наравне со встроенными вариантами. Размер — до 48 блоков по каждой стороне. Блоки структурной пустоты и пазлов становятся воздухом.
+
+### Свои имена
+`data/<ns>/cities/names/<культура>.json`:
+```json
+{ "town_starts": ["Бел", "Яр"], "town_ends": ["город", "слав"], "people": ["Богдана", "Влас"] }
+```
+Любой список можно не указывать — тогда останется встроенный.
+
+Готовый пример датапака лежит в `examples/cities-example-datapack`: имена для тайги и описание дома. Сам `.nbt` нужно сохранить свой, инструкция внутри.
+
+### Мультиплеер
+- `protectBuildings` (по умолчанию выключено): ломать и ставить блоки в зданиях поселения могут только мэр, операторы и игроки с репутацией «Друг» и выше. Купленные дома защищены для владельца всегда.
+- `maxTownsPerPlayer` (1) — сколькими поселениями игрок может править, чтобы основать ещё одно.
+- `allowPlayerWars` (вкл.) — могут ли мэры-игроки объявлять войны.
+- `/city admin stats` — число поселений, жителей, стражи, строек, караванов и войн; сколько городов обработала последняя перепись и за сколько миллисекунд; сколько зданий загружено из датапаков.
+
+### API для других модов
+- `com.wusternfuchs.cities.api.CitiesApi`: `settlementAt(level, pos)`, `settlement(level, id)`, `settlements(level)`, `reputation(settlement, player)`.
+- События на `NeoForge.EVENT_BUS` — подклассы `SettlementEvent`: `Founded`, `TierChanged`, `BuildingCompleted`, `SiegeStarted`, `WarDeclared`.
+
 ## Команды
 
 | Команда | Кто | Что делает |
@@ -257,6 +298,7 @@
 | `/city admin war <город>` | оп | поселение, где вы стоите, объявляет войну |
 | `/city admin battle` | оп | начать битву немедленно |
 | `/city admin disaster <fire/epidemic/drought>` | оп | вызвать бедствие |
+| `/city admin stats` | оп | статистика и время переписи |
 | `/city admin create [название]` | оп | основать поселение здесь |
 | `/city admin rename <название>` | оп | переименовать |
 | `/city admin setlevel <уровень>` | оп | задать уровень |

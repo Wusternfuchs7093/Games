@@ -1,6 +1,7 @@
 package com.wusternfuchs.cities.people;
 
 import com.wusternfuchs.cities.CitiesConfig;
+import com.wusternfuchs.cities.data.CultureNames;
 import com.wusternfuchs.cities.settlement.ArchitectureStyle;
 import com.wusternfuchs.cities.settlement.Settlement;
 import com.wusternfuchs.cities.settlement.SettlementData;
@@ -120,6 +121,10 @@ public final class ResidentManager {
     }
 
     private static String randomName(ArchitectureStyle style, RandomSource random) {
+        CultureNames.Names custom = CultureNames.get(style);
+        if (custom != null && !custom.people().isEmpty()) {
+            return custom.people().get(random.nextInt(custom.people().size()));
+        }
         String[] names = switch (style) {
             case PLAINS -> PLAINS;
             case DESERT -> DESERT;

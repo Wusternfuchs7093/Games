@@ -425,5 +425,8 @@
   "cities.command.need_book": "Возьмите в руку книгу, чтобы записать летопись.",
   "cities.command.chronicle_written": "Летопись %s записана.",
   "cities.chronicle.founded": "Основан в день %s",
-  "cities.chronicle.population": "Жителей: %s"
+  "cities.chronicle.population": "Жителей: %s",
+  "cities.command.too_many_towns": "Вы уже правите максимальным числом поселений на этом сервере.",
+  "cities.command.wars_disabled": "Войны игроков на этом сервере отключены.",
+  "cities.command.stats": "Поселений: %s · жителей: %s · стражи: %s · строек: %s · караванов: %s · войн: %s · последняя перепись: %s городов за %s мс · зданий из датапаков: %s"
 }

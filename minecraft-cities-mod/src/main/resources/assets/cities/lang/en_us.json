@@ -425,5 +425,8 @@
   "cities.command.need_book": "Hold a book to write the chronicle in.",
   "cities.command.chronicle_written": "The chronicle of %s is written.",
   "cities.chronicle.founded": "Founded on day %s",
-  "cities.chronicle.population": "Population: %s"
+  "cities.chronicle.population": "Population: %s",
+  "cities.command.too_many_towns": "You already rule as many settlements as this server allows.",
+  "cities.command.wars_disabled": "Player wars are disabled on this server.",
+  "cities.command.stats": "Settlements: %s · population: %s · guards: %s · building: %s · caravans: %s · wars: %s · last census: %s towns in %s ms · datapack buildings: %s"
 }

@@ -1,6 +1,8 @@
 package com.wusternfuchs.cities.defense;
 
 import com.wusternfuchs.cities.CitiesConfig;
+import com.wusternfuchs.cities.api.CitiesApi;
+import com.wusternfuchs.cities.api.SettlementEvent;
 import com.wusternfuchs.cities.building.BuildingType;
 import com.wusternfuchs.cities.diplomacy.DiplomacyManager;
 import com.wusternfuchs.cities.diplomacy.Relation;
@@ -200,6 +202,7 @@ public final class DefenseManager {
             }
         }
         callAllies(level, data, s);
+        CitiesApi.post(new SettlementEvent.SiegeStarted(level, s));
         return true;
     }
 

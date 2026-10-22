@@ -1,0 +1,5 @@
+{
+  "town_starts": ["Bel", "Yar", "Volo", "Novo", "Ozer", "Kras", "Lesno", "Ust"],
+  "town_ends": ["gorod", "slav", "ozersk", "dol", "mir", "pole"],
+  "people": ["Bogdana", "Vlas", "Dobrynya", "Zarema", "Luka", "Mstislav", "Olesya", "Radim", "Snezhana", "Yaroslav"]
+}

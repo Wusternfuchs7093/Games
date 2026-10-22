@@ -1,0 +1,5 @@
+{
+  "building": "house",
+  "structure": "example:fancy_house",
+  "cultures": ["plains", "taiga"]
+}

@@ -1,11 +1,13 @@
 package com.wusternfuchs.cities.building;
 
+import com.wusternfuchs.cities.data.CustomBlueprints;
 import com.wusternfuchs.cities.settlement.ArchitectureStyle;
 import com.wusternfuchs.cities.settlement.SettlementTier;
 import net.minecraft.network.chat.Component;
 
 import java.util.EnumMap;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.function.BiFunction;
@@ -54,7 +56,23 @@ public enum BuildingType {
         return blueprint(style, variant, false);
     }
 
+    /** Built-in variants plus any datapack buildings of this type for the culture. */
+    public int variantCount(ArchitectureStyle style) {
+        return variants + CustomBlueprints.forType(this, style).size();
+    }
+
+    public static void clearCache() {
+        CACHE.clear();
+    }
+
     public Blueprint blueprint(ArchitectureStyle style, int variant, boolean stone) {
+        List<Blueprint> custom = CustomBlueprints.forType(this, style);
+        if (!custom.isEmpty()) {
+            int index = Math.floorMod(variant, variants + custom.size());
+            if (index >= variants) {
+                return custom.get(index - variants);
+            }
+        }
         int v = Math.floorMod(variant, variants);
         return CACHE.computeIfAbsent(name() + "/" + style.name() + "/" + v + (stone ? "/stone" : ""),
                 key -> generator.apply(Palette.of(style, stone), v));

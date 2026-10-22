@@ -1,5 +1,6 @@
 package com.wusternfuchs.cities.settlement;
 
+import com.wusternfuchs.cities.data.CultureNames;
 import net.minecraft.util.RandomSource;
 
 import java.util.function.Predicate;
@@ -43,6 +44,10 @@ public final class NameGenerator {
             case TAIGA -> TAIGA;
             case OTHER -> OTHER;
         };
+        CultureNames.Names custom = CultureNames.get(style);
+        if (custom != null && !custom.townStarts().isEmpty() && !custom.townEnds().isEmpty()) {
+            parts = new String[][]{custom.townStarts().toArray(new String[0]), custom.townEnds().toArray(new String[0])};
+        }
         for (int attempt = 0; attempt < 32; attempt++) {
             String name = pick(parts[0], random) + pick(parts[1], random);
             if (!taken.test(name)) {

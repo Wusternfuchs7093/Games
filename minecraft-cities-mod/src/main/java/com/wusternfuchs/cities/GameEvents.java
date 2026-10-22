@@ -1,6 +1,8 @@
 package com.wusternfuchs.cities;
 
 import com.wusternfuchs.cities.command.CityCommands;
+import com.wusternfuchs.cities.data.CultureNames;
+import com.wusternfuchs.cities.data.CustomBlueprints;
 import com.wusternfuchs.cities.defense.DefenseManager;
 import com.wusternfuchs.cities.entity.Guard;
 import com.wusternfuchs.cities.people.ResidentManager;
@@ -24,6 +26,7 @@ import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.entity.raid.Raider;
 import net.minecraft.world.level.block.Blocks;
 import net.neoforged.bus.api.SubscribeEvent;
+import net.neoforged.neoforge.event.AddReloadListenerEvent;
 import net.neoforged.neoforge.event.RegisterCommandsEvent;
 import net.neoforged.neoforge.event.entity.living.LivingDamageEvent;
 import net.neoforged.neoforge.event.entity.living.LivingDeathEvent;
@@ -128,6 +131,12 @@ public final class GameEvents {
             player.displayClientMessage(Component.translatable("cities.house.protected"), true);
             event.setCanceled(true);
         }
+    }
+
+    @SubscribeEvent
+    public static void onAddReloadListeners(AddReloadListenerEvent event) {
+        event.addListener(new CustomBlueprints());
+        event.addListener(new CultureNames());
     }
 
     @SubscribeEvent

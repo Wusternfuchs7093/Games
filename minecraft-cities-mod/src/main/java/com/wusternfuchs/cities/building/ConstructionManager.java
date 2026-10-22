@@ -1,6 +1,8 @@
 package com.wusternfuchs.cities.building;
 
 import com.wusternfuchs.cities.CitiesConfig;
+import com.wusternfuchs.cities.api.CitiesApi;
+import com.wusternfuchs.cities.api.SettlementEvent;
 import com.wusternfuchs.cities.building.ConstructionProject.Placement;
 import com.wusternfuchs.cities.settlement.Settlement;
 import com.wusternfuchs.cities.settlement.SettlementData;
@@ -173,6 +175,7 @@ public final class ConstructionManager {
         s.replaceBuilding(building);
         s.setProject(null);
         s.record(SettlementManager.day(level), "built", building.type().id());
+        CitiesApi.post(new SettlementEvent.BuildingCompleted(level, s, building));
         if (project.builder() != null && level.getEntity(project.builder()) instanceof Villager builder) {
             builder.setItemSlot(EquipmentSlot.MAINHAND, ItemStack.EMPTY);
         }

@@ -114,6 +114,19 @@ public final class CitiesConfig {
             .comment("If true, players may found their own settlement with a bell and /city found.")
             .define("allowPlayerFounding", true);
 
+    public static final ModConfigSpec.IntValue MAX_TOWNS_PER_PLAYER = BUILDER
+            .comment("How many settlements one player may rule at once (founded or won in elections) to found another.")
+            .defineInRange("maxTownsPerPlayer", 1, 0, 100);
+
+    public static final ModConfigSpec.BooleanValue PLAYER_WARS = BUILDER
+            .comment("If true, player mayors may declare war on other settlements.")
+            .define("allowPlayerWars", true);
+
+    public static final ModConfigSpec.BooleanValue PROTECT_BUILDINGS = BUILDER
+            .comment("If true, only the mayor, operators and players with at least Friend reputation may break or place",
+                    "blocks inside a settlement's buildings. Bought houses are always protected for their owner.")
+            .define("protectBuildings", false);
+
     static {
         BUILDER.pop().push("disasters");
     }

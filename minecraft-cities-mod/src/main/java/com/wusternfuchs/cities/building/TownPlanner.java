@@ -79,7 +79,7 @@ public final class TownPlanner {
         if (type == BuildingType.WALL) {
             building = new Building(BuildingType.WALL, s.center(), Rotation.NONE, wallRadius(s));
         } else {
-            building = findSite(level, data, s, type, level.getRandom().nextInt(type.variants()));
+            building = findSite(level, data, s, type, level.getRandom().nextInt(type.variantCount(s.style())));
         }
         if (building == null) {
             return false;

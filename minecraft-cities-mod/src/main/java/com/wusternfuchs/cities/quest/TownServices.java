@@ -1,5 +1,6 @@
 package com.wusternfuchs.cities.quest;
 
+import com.wusternfuchs.cities.CitiesConfig;
 import com.wusternfuchs.cities.building.Building;
 import com.wusternfuchs.cities.building.BuildingType;
 import com.wusternfuchs.cities.entity.CitiesEntities;
@@ -72,7 +73,7 @@ public final class TownServices {
             return true;
         }
         Settlement s = SettlementData.get(level).at(pos);
-        if (s == null || s.houseOwners().isEmpty()) {
+        if (s == null) {
             return true;
         }
         Building building = buildingAt(s, pos);
@@ -80,7 +81,12 @@ public final class TownServices {
             return true;
         }
         UUID owner = s.houseOwners().get(building.origin());
-        return owner == null || owner.equals(player.getUUID());
+        if (owner != null) {
+            return owner.equals(player.getUUID());
+        }
+        // Optionally the whole town is off limits to anyone it does not count as a friend.
+        return !CitiesConfig.PROTECT_BUILDINGS.get() || GovernanceManager.isMayor(s, player)
+                || ReputationRank.of(s.reputation(player.getUUID())).ordinal() >= ReputationRank.FRIEND.ordinal();
     }
 
     public static int price(BuildingType type) {

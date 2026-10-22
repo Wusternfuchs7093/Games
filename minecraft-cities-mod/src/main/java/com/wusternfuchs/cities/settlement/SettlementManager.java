@@ -2,6 +2,8 @@ package com.wusternfuchs.cities.settlement;
 
 import com.wusternfuchs.cities.CitiesConfig;
 import com.wusternfuchs.cities.CitiesMod;
+import com.wusternfuchs.cities.api.CitiesApi;
+import com.wusternfuchs.cities.api.SettlementEvent;
 import com.wusternfuchs.cities.building.BuildingType;
 import com.wusternfuchs.cities.building.ConstructionManager;
 import com.wusternfuchs.cities.building.TownPlanner;
@@ -63,6 +65,18 @@ public final class SettlementManager {
     private static final int CARAVAN_TICK_INTERVAL = 100;
     private static final int FESTIVAL_TICK_INTERVAL = 10;
 
+    /** How long the last census of a dimension took and how many settlements it simulated, for /city admin stats. */
+    private static long lastCensusMicros;
+    private static int lastCensusCount;
+
+    public static long lastCensusMicros() {
+        return lastCensusMicros;
+    }
+
+    public static int lastCensusCount() {
+        return lastCensusCount;
+    }
+
     /** Settlement each online player stood in last time we checked, for enter/leave titles. */
     private static final Map<UUID, UUID> PLAYER_LOCATIONS = new HashMap<>();
 
@@ -116,11 +130,16 @@ public final class SettlementManager {
         }
         if (time % CitiesConfig.CENSUS_INTERVAL.get() == 0) {
             SettlementData data = SettlementData.get(level);
+            long started = System.nanoTime();
+            int simulated = 0;
             for (Settlement settlement : new ArrayList<>(data.all())) {
                 if (level.isPositionEntityTicking(settlement.center())) {
                     simulate(level, data, settlement);
+                    simulated++;
                 }
             }
+            lastCensusMicros = (System.nanoTime() - started) / 1000;
+            lastCensusCount = simulated;
         }
     }
 
@@ -172,6 +191,7 @@ public final class SettlementManager {
         }
         data.add(settlement);
         census(level, data, settlement);
+        CitiesApi.post(new SettlementEvent.Founded(level, settlement));
         CitiesMod.LOGGER.info("Registered settlement {} at {} (potential {})", finalName, center, settlement.potential());
         return settlement;
     }
@@ -415,10 +435,12 @@ public final class SettlementManager {
 
     public static void changeTier(ServerLevel level, SettlementData data, Settlement s, SettlementTier tier) {
         boolean promotion = tier.ordinal() > s.tier().ordinal();
+        SettlementTier previous = s.tier();
         s.setTier(tier);
         s.setDecline(0);
         data.updateTerritory(s);
         DefenseManager.refitGuards(level, s);
+        CitiesApi.post(new SettlementEvent.TierChanged(level, s, previous));
         s.record(day(level), promotion ? "promoted" : "demoted", tier.id());
 
         Component message = Component.translatable(promotion ? "cities.announce.promoted" : "cities.announce.demoted",

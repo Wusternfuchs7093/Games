@@ -18,6 +18,7 @@ import com.wusternfuchs.cities.diplomacy.DiplomacyManager;
 import com.wusternfuchs.cities.disaster.DisasterManager;
 import com.wusternfuchs.cities.settlement.Mood;
 import com.wusternfuchs.cities.network.CitiesNetwork;
+import com.wusternfuchs.cities.data.CustomBlueprints;
 import com.wusternfuchs.cities.settlement.BorderDisplay;
 import net.minecraft.server.network.Filterable;
 import net.minecraft.world.item.component.WrittenBookContent;
@@ -182,6 +183,7 @@ public final class CityCommands {
                                 .suggests(SETTLEMENT_NAMES)
                                 .executes(ctx -> declareWar(ctx, true))))
                 .then(Commands.literal("battle").executes(CityCommands::forceBattle))
+                .then(Commands.literal("stats").executes(CityCommands::stats))
                 .then(Commands.literal("disaster")
                         .then(Commands.argument("kind", StringArgumentType.word())
                                 .suggests(DISASTER_IDS)
@@ -538,6 +540,10 @@ public final class CityCommands {
         if (!player.getMainHandItem().is(Items.BELL)) {
             throw NEED_BELL.create();
         }
+        long ruled = data(ctx).all().stream().filter(t -> player.getUUID().equals(t.mayor())).count();
+        if (!ctx.getSource().hasPermission(2) && ruled >= CitiesConfig.MAX_TOWNS_PER_PLAYER.get()) {
+            throw failure("cities.command.too_many_towns");
+        }
         ServerLevel level = ctx.getSource().getLevel();
         SettlementData data = data(ctx);
         String name = StringArgumentType.getString(ctx, "name");
@@ -749,6 +755,26 @@ public final class CityCommands {
             source.sendSuccess(factor::describe, false);
         }
         return target;
+    }
+
+    private static int stats(CommandContext<CommandSourceStack> ctx) {
+        SettlementData data = data(ctx);
+        int population = 0;
+        int guards = 0;
+        int projects = 0;
+        for (Settlement s : data.all()) {
+            population += s.population();
+            guards += s.guards();
+            projects += s.project() != null ? 1 : 0;
+        }
+        int totalPopulation = population;
+        int totalGuards = guards;
+        int totalProjects = projects;
+        ctx.getSource().sendSuccess(() -> Component.translatable("cities.command.stats", data.all().size(),
+                totalPopulation, totalGuards, totalProjects, data.caravans().size(), data.wars().size(),
+                SettlementManager.lastCensusCount(), SettlementManager.lastCensusMicros() / 1000.0,
+                CustomBlueprints.count()).withStyle(ChatFormatting.GRAY), false);
+        return data.all().size();
     }
 
     private static int gui(CommandContext<CommandSourceStack> ctx) throws CommandSyntaxException {
@@ -977,6 +1003,9 @@ public final class CityCommands {
         Settlement enemy = named(ctx);
         ServerLevel level = ctx.getSource().getLevel();
         SettlementData data = data(ctx);
+        if (!force && !CitiesConfig.PLAYER_WARS.get()) {
+            throw failure("cities.command.wars_disabled");
+        }
         boolean allowed = force ? enemy != s && !WarManager.atWar(data, s.id(), enemy.id())
                 : WarManager.canDeclare(level, data, s, enemy);
         if (!allowed) {

@@ -1,0 +1,5 @@
+Save your house with a structure block named "example:fancy_house" and copy the file
+<world>/generated/example/structures/fancy_house.nbt into this folder as fancy_house.nbt.
+
+The front (door side) must face south (+Z) and the lowest layer is the floor.
+Beds and workstations inside count for the town like in its own buildings.

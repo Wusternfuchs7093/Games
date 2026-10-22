@@ -1,6 +1,8 @@
 package com.wusternfuchs.cities.war;
 
 import com.wusternfuchs.cities.CitiesConfig;
+import com.wusternfuchs.cities.api.CitiesApi;
+import com.wusternfuchs.cities.api.SettlementEvent;
 import com.wusternfuchs.cities.building.BuildingType;
 import com.wusternfuchs.cities.diplomacy.DiplomacyManager;
 import com.wusternfuchs.cities.diplomacy.Relation;
@@ -181,6 +183,7 @@ public final class WarManager {
         data.setDirty();
         broadcast(level, Component.translatable("cities.war.declared", attacker.name(), defender.name())
                 .withStyle(ChatFormatting.DARK_RED));
+        CitiesApi.post(new SettlementEvent.WarDeclared(level, attacker, defender));
         return war;
     }
 

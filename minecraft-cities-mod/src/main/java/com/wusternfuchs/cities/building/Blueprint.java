@@ -158,6 +158,29 @@ public final class Blueprint {
             return this;
         }
 
+        /** Pairs every door bottom with its top and every bed foot with its head, for imported structures. */
+        public Builder autoPartners() {
+            for (int y = 0; y < height; y++) {
+                for (int z = 0; z < depth; z++) {
+                    for (int x = 0; x < width; x++) {
+                        BlockState state = states[(y * depth + z) * width + x];
+                        BlockPos pos = new BlockPos(x, y, z);
+                        BlockPos other = null;
+                        if (state.getBlock() instanceof DoorBlock && state.getValue(DoorBlock.HALF) == DoubleBlockHalf.LOWER) {
+                            other = pos.above();
+                        } else if (state.getBlock() instanceof BedBlock && state.getValue(BedBlock.PART) == BedPart.FOOT) {
+                            other = pos.relative(state.getValue(BedBlock.FACING));
+                        }
+                        if (other != null && other.getX() >= 0 && other.getY() >= 0 && other.getZ() >= 0
+                                && other.getX() < width && other.getY() < height && other.getZ() < depth) {
+                            partners.put(pos, other);
+                        }
+                    }
+                }
+            }
+            return this;
+        }
+
         public Blueprint build() {
             return new Blueprint(this);
         }
