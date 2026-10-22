@@ -5,6 +5,7 @@ import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.ChestBlock;
 import net.minecraft.world.level.block.FarmBlock;
+import net.minecraft.world.level.block.FenceGateBlock;
 import net.minecraft.world.level.block.LadderBlock;
 import net.minecraft.world.level.block.LanternBlock;
 import net.minecraft.world.level.block.LecternBlock;
@@ -103,6 +104,47 @@ public final class Blueprints {
             b.fill(1, 1, 3, 2, 1, 4, cot);
             b.fill(6, 1, 3, 7, 1, 4, cot);
         }).build();
+    }
+
+    /** A roomy house for the town's elite: two beds, books, carpets and light. */
+    public static Blueprint manor(Palette p, int variant) {
+        int width = 11;
+        int depth = 9;
+        return hall(p, width, depth, b -> {
+            b.bed(1, 1, 2, p.bed(), Direction.NORTH);
+            b.bed(width - 2, 1, 2, p.bed(), Direction.NORTH);
+            b.fill(3, 1, 1, 7, 1, 1, Blocks.BOOKSHELF.defaultBlockState());
+            b.fill(3, 1, 3, 7, 1, 6, Blocks.RED_CARPET.defaultBlockState());
+            b.set(1, 1, depth - 2, Blocks.CRAFTING_TABLE.defaultBlockState());
+            b.set(width - 2, 1, depth - 2, Blocks.FLOWER_POT.defaultBlockState());
+            b.set(3, 2, 1, Blocks.LANTERN.defaultBlockState());
+            b.set(7, 2, 1, Blocks.LANTERN.defaultBlockState());
+        }).build();
+    }
+
+    /** A fenced graveyard: stones and flowers in two rows along a gravel path. */
+    public static Blueprint cemetery(Palette p, int variant) {
+        Blueprint.Builder b = new Blueprint.Builder(7, 3, 7);
+        b.fill(0, 0, 0, 6, 0, 6, Blocks.COARSE_DIRT.defaultBlockState());
+        b.fill(3, 0, 1, 3, 0, 6, Blocks.GRAVEL.defaultBlockState());
+        for (int x = 0; x <= 6; x++) {
+            for (int z = 0; z <= 6; z++) {
+                if (x == 0 || x == 6 || z == 0 || z == 6) {
+                    b.set(x, 1, z, p.fence());
+                }
+            }
+        }
+        b.set(3, 1, 6, Blocks.OAK_FENCE_GATE.defaultBlockState().setValue(FenceGateBlock.FACING, Direction.SOUTH));
+        for (int x : new int[]{1, 5}) {
+            for (int z : new int[]{1, 3}) {
+                b.set(x, 1, z, Blocks.COBBLESTONE_WALL.defaultBlockState());
+                b.set(x, 1, z + 1, Blocks.POPPY.defaultBlockState());
+            }
+        }
+        b.set(0, 2, 0, Blocks.LANTERN.defaultBlockState());
+        b.set(6, 2, 0, Blocks.LANTERN.defaultBlockState());
+        b.entrance(3, 7);
+        return b.build();
     }
 
     public static Blueprint farm(Palette p, int variant) {

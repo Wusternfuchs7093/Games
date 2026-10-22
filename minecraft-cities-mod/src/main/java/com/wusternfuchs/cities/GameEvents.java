@@ -3,6 +3,9 @@ package com.wusternfuchs.cities;
 import com.wusternfuchs.cities.command.CityCommands;
 import com.wusternfuchs.cities.defense.DefenseManager;
 import com.wusternfuchs.cities.entity.Guard;
+import com.wusternfuchs.cities.people.ResidentManager;
+import net.minecraft.world.InteractionHand;
+import net.minecraft.world.InteractionResult;
 import com.wusternfuchs.cities.war.WarManager;
 import com.wusternfuchs.cities.settlement.SettlementManager;
 import com.wusternfuchs.cities.trade.VillagerTrading;
@@ -67,6 +70,14 @@ public final class GameEvents {
 
     @SubscribeEvent
     public static void onEntityInteract(PlayerInteractEvent.EntityInteract event) {
+        if (event.getEntity().isShiftKeyDown() && event.getHand() == InteractionHand.MAIN_HAND
+                && event.getTarget() instanceof Villager villager && villager.level() instanceof ServerLevel level
+                && event.getEntity() instanceof ServerPlayer player) {
+            ResidentManager.describe(level, player, villager);
+            event.setCancellationResult(InteractionResult.SUCCESS);
+            event.setCanceled(true);
+            return;
+        }
         VillagerTrading.onInteract(event);
     }
 

@@ -17,6 +17,8 @@ import com.wusternfuchs.cities.defense.DefenseManager;
 import com.wusternfuchs.cities.diplomacy.DiplomacyManager;
 import com.wusternfuchs.cities.disaster.DisasterManager;
 import com.wusternfuchs.cities.settlement.Mood;
+import com.wusternfuchs.cities.people.SocialClass;
+import com.wusternfuchs.cities.people.Trait;
 import com.wusternfuchs.cities.diplomacy.Relation;
 import com.wusternfuchs.cities.governance.GovernanceManager;
 import com.wusternfuchs.cities.governance.Law;
@@ -42,6 +44,7 @@ import net.minecraft.commands.Commands;
 import net.minecraft.commands.SharedSuggestionProvider;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;
+import net.minecraft.network.chat.MutableComponent;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.InteractionHand;
@@ -217,6 +220,11 @@ public final class CityCommands {
                                 .executes(CityCommands::found)))
                 .then(Commands.literal("run").executes(CityCommands::run))
                 .then(Commands.literal("wars").executes(CityCommands::wars))
+                .then(Commands.literal("people")
+                        .executes(ctx -> people(ctx, here(ctx)))
+                        .then(Commands.argument("name", StringArgumentType.greedyString())
+                                .suggests(SETTLEMENT_NAMES)
+                                .executes(ctx -> people(ctx, named(ctx)))))
                 .then(Commands.literal("mood")
                         .executes(ctx -> mood(ctx, here(ctx)))
                         .then(Commands.argument("name", StringArgumentType.greedyString())
@@ -709,6 +717,28 @@ public final class CityCommands {
             source.sendSuccess(factor::describe, false);
         }
         return target;
+    }
+
+    private static int people(CommandContext<CommandSourceStack> ctx, Settlement s) {
+        CommandSourceStack source = ctx.getSource();
+        source.sendSuccess(() -> Component.translatable("cities.command.people.header", s.name(), s.adults(),
+                s.children(), s.deathsTotal()).withStyle(ChatFormatting.GOLD), false);
+        for (SocialClass socialClass : SocialClass.values()) {
+            int count = s.count(socialClass);
+            source.sendSuccess(() -> Component.literal("  ").append(socialClass.displayName())
+                    .append(Component.literal(": " + count + " · ").withStyle(ChatFormatting.GRAY))
+                    .append(Component.translatable("cities.class." + socialClass.id() + ".needs")
+                            .withStyle(ChatFormatting.DARK_GRAY)), false);
+        }
+        MutableComponent temperaments = Component.translatable("cities.command.people.traits").copy();
+        for (Trait trait : Trait.values()) {
+            temperaments.append(Component.literal(" ")).append(trait.displayName())
+                    .append(Component.literal(" " + s.count(trait) + ";").withStyle(ChatFormatting.GRAY));
+        }
+        source.sendSuccess(() -> temperaments, false);
+        source.sendSuccess(() -> Component.translatable("cities.command.people.hint").withStyle(ChatFormatting.DARK_GRAY),
+                false);
+        return s.population();
     }
 
     private static int forceDisaster(CommandContext<CommandSourceStack> ctx) throws CommandSyntaxException {

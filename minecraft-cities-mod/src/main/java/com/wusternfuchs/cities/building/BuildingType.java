@@ -21,6 +21,8 @@ public enum BuildingType {
     WATCHTOWER(1, true, Blueprints::watchtower),
     LIBRARY(1, true, Blueprints::library),
     HOSPITAL(1, true, Blueprints::hospital),
+    MANOR(1, true, Blueprints::manor),
+    CEMETERY(1, true, Blueprints::cemetery),
     LAMP(1, false, Blueprints::lamp),
     /** Ring wall around the town; laid out from the terrain, its variant is the radius. */
     WALL(1, false, (palette, variant) -> new Blueprint.Builder(1, 1, 1).build());
@@ -58,7 +60,7 @@ public enum BuildingType {
     /** Wooden buildings of these types can later be rebuilt in stone. */
     public boolean upgradable() {
         return this == HOUSE || this == WORKSHOP || this == WAREHOUSE || this == TOWN_HALL || this == LIBRARY
-                || this == WATCHTOWER || this == HOSPITAL;
+                || this == WATCHTOWER || this == HOSPITAL || this == MANOR;
     }
 
     public String id() {

@@ -1,6 +1,7 @@
 package com.wusternfuchs.cities.building;
 
 import com.wusternfuchs.cities.CitiesConfig;
+import com.wusternfuchs.cities.people.SocialClass;
 import com.wusternfuchs.cities.research.Tech;
 import com.wusternfuchs.cities.settlement.Settlement;
 import com.wusternfuchs.cities.settlement.SettlementData;
@@ -118,6 +119,14 @@ public final class TownPlanner {
         }
         if (s.workstations() < s.adults() && s.count(BuildingType.WORKSHOP) < 1 + s.population() / 4) {
             return BuildingType.WORKSHOP;
+        }
+        if (s.tier().ordinal() >= SettlementTier.VILLAGE.ordinal() && s.deathsTotal() >= 3
+                && s.count(BuildingType.CEMETERY) == 0) {
+            return BuildingType.CEMETERY;
+        }
+        int elite = s.count(SocialClass.ELITE);
+        if (s.tier().ordinal() >= SettlementTier.TOWNSHIP.ordinal() && s.count(BuildingType.MANOR) * 2 < elite) {
+            return BuildingType.MANOR;
         }
         if (s.tier().ordinal() >= SettlementTier.TOWNSHIP.ordinal() && s.count(BuildingType.LIBRARY) == 0) {
             return BuildingType.LIBRARY;

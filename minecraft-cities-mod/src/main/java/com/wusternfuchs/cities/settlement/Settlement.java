@@ -6,6 +6,8 @@ import com.wusternfuchs.cities.building.ConstructionProject;
 import com.wusternfuchs.cities.defense.Siege;
 import com.wusternfuchs.cities.governance.Law;
 import com.wusternfuchs.cities.governance.TaxRate;
+import com.wusternfuchs.cities.people.SocialClass;
+import com.wusternfuchs.cities.people.Trait;
 import com.wusternfuchs.cities.research.Era;
 import com.wusternfuchs.cities.research.Tech;
 import it.unimi.dsi.fastutil.longs.LongOpenHashSet;
@@ -113,6 +115,11 @@ public final class Settlement {
     private Building fire;
     private long fireStart;
     private final List<Building> damaged = new ArrayList<>();
+
+    // People
+    private int[] classes = new int[SocialClass.values().length];
+    private int[] traits = new int[Trait.values().length];
+    private int deathsTotal;
 
     public Settlement(UUID id, BlockPos center, String name, ArchitectureStyle style, int potential, long foundedDay) {
         this.id = id;
@@ -350,6 +357,28 @@ public final class Settlement {
 
     public void setOverlord(@Nullable UUID overlord) {
         this.overlord = overlord;
+    }
+
+    public int count(SocialClass socialClass) {
+        return classes[socialClass.ordinal()];
+    }
+
+    public int count(Trait trait) {
+        return traits[trait.ordinal()];
+    }
+
+    public void setPeople(int[] classes, int[] traits) {
+        this.classes = classes.clone();
+        this.traits = traits.clone();
+    }
+
+    /** Everyone who ever died in the settlement. */
+    public int deathsTotal() {
+        return deathsTotal;
+    }
+
+    public void addDeath() {
+        deathsTotal++;
     }
 
     /** Censuses the current epidemic may still last (0 = none). */
@@ -660,6 +689,9 @@ public final class Settlement {
         truces.forEach((other, until) -> truceTag.putLong(other.toString(), until));
         tag.put("truces", truceTag);
 
+        tag.putIntArray("classes", classes);
+        tag.putIntArray("traits", traits);
+        tag.putInt("deathsTotal", deathsTotal);
         tag.putInt("epidemic", epidemic);
         tag.putInt("sick", sick);
         tag.putInt("drought", drought);
@@ -778,6 +810,15 @@ public final class Settlement {
         if (tag.hasUUID("overlord")) {
             s.overlord = tag.getUUID("overlord");
         }
+        int[] savedClasses = tag.getIntArray("classes");
+        if (savedClasses.length == s.classes.length) {
+            s.classes = savedClasses;
+        }
+        int[] savedTraits = tag.getIntArray("traits");
+        if (savedTraits.length == s.traits.length) {
+            s.traits = savedTraits;
+        }
+        s.deathsTotal = tag.getInt("deathsTotal");
         s.epidemic = tag.getInt("epidemic");
         s.sick = tag.getInt("sick");
         s.drought = tag.getInt("drought");

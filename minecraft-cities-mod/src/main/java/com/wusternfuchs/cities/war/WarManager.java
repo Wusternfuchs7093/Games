@@ -6,6 +6,7 @@ import com.wusternfuchs.cities.diplomacy.DiplomacyManager;
 import com.wusternfuchs.cities.diplomacy.Relation;
 import com.wusternfuchs.cities.entity.CitiesEntities;
 import com.wusternfuchs.cities.entity.Guard;
+import com.wusternfuchs.cities.people.Trait;
 import com.wusternfuchs.cities.research.Tech;
 import com.wusternfuchs.cities.settlement.Settlement;
 import com.wusternfuchs.cities.settlement.SettlementData;
@@ -90,7 +91,8 @@ public final class WarManager {
 
     /** Rough military might: guards, golems, size, walls and the right technologies. */
     public static int strength(Settlement s, boolean defending) {
-        int strength = s.guards() * 3 + s.golems() * 2 + s.tier().ordinal() * 5;
+        int strength = s.guards() * 3 + s.golems() * 2 + s.tier().ordinal() * 5
+                + s.count(Trait.BRAVE);
         if (s.hasTech(Tech.METALLURGY)) {
             strength += 10;
         }

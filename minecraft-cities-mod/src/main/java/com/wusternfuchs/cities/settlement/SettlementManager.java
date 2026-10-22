@@ -10,6 +10,8 @@ import com.wusternfuchs.cities.disaster.DisasterManager;
 import com.wusternfuchs.cities.diplomacy.DiplomacyManager;
 import com.wusternfuchs.cities.governance.GovernanceManager;
 import com.wusternfuchs.cities.governance.Law;
+import com.wusternfuchs.cities.people.ResidentManager;
+import com.wusternfuchs.cities.people.Trait;
 import com.wusternfuchs.cities.research.ResearchManager;
 import com.wusternfuchs.cities.research.Tech;
 import com.wusternfuchs.cities.trade.TradeManager;
@@ -233,10 +235,12 @@ public final class SettlementManager {
         int employed = 0;
         int foodProducers = 0;
         int scholars = 0;
+        List<Villager> residents = new ArrayList<>();
         for (Villager villager : level.getEntitiesOfClass(Villager.class, box, Villager::isAlive)) {
             if (data.at(villager.blockPosition()) != s) {
                 continue;
             }
+            residents.add(villager);
             if (villager.isBaby()) {
                 children++;
                 continue;
@@ -263,6 +267,7 @@ public final class SettlementManager {
 
         s.applyCensus(adults, children, beds, workstations, employed, foodProducers, golems);
         s.setScholars(scholars);
+        ResidentManager.process(level, s, residents);
     }
 
     /**
@@ -280,9 +285,10 @@ public final class SettlementManager {
             eaten /= 2;
         }
         s.addFood(produced - eaten);
-        // The sick stay home.
+        // The sick stay home; the hardworking make up for the lazy.
         int working = s.adults() == 0 ? 0 : s.employed() * Math.max(0, s.adults() - s.sick()) / s.adults();
-        int taxes = s.tax().collect(working);
+        working = Math.max(0, working + (s.count(Trait.HARDWORKING) - s.count(Trait.LAZY)) / 2);
+        int taxes = Math.max(0, s.tax().collect(working) - s.count(Trait.GREEDY) / 2);
         if (s.hasTech(Tech.CURRENCY)) {
             taxes += taxes / 4;
         }
@@ -470,6 +476,13 @@ public final class SettlementManager {
             return;
         }
         s.addRecentDeath();
+        s.addDeath();
+        String name = ResidentManager.nameOf(villager);
+        if (ResidentManager.diedOfOldAge(villager)) {
+            s.record(day(level), "old_age", name + " (" + ResidentManager.age(level, villager) + ")");
+        } else if (killer == null && !name.isEmpty()) {
+            s.record(day(level), "died", name);
+        }
         if (killer != null) {
             s.changeReputation(killer.getUUID(), REPUTATION_KILL_VILLAGER);
             s.record(day(level), "murder", killer.getGameProfile().getName());

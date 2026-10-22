@@ -2,6 +2,8 @@ package com.wusternfuchs.cities.settlement;
 
 import com.wusternfuchs.cities.building.BuildingType;
 import com.wusternfuchs.cities.governance.Law;
+import com.wusternfuchs.cities.people.SocialClass;
+import com.wusternfuchs.cities.people.Trait;
 import com.wusternfuchs.cities.research.Tech;
 import net.minecraft.ChatFormatting;
 import net.minecraft.network.chat.Component;
@@ -45,6 +47,22 @@ public final class Mood {
         add(list, "markets", Math.min(10, s.count(BuildingType.MARKET) * 5));
         add(list, "well", s.count(BuildingType.WELL) > 0 ? 5 : 0);
         add(list, "medicine", s.hasTech(Tech.MEDICINE) ? 5 : 0);
+
+        // What each class of society expects from its town.
+        if (s.count(SocialClass.ARTISAN) > 0) {
+            add(list, "artisans", s.count(BuildingType.MARKET) > 0 ? 3 : -5);
+        }
+        if (s.count(SocialClass.SCHOLAR) > 0) {
+            add(list, "scholars", s.count(BuildingType.LIBRARY) > 0 ? 3 : -5);
+        }
+        int elite = s.count(SocialClass.ELITE);
+        if (elite > 0) {
+            add(list, "elite", s.count(BuildingType.MANOR) * 2 >= elite ? 5 : -8);
+        }
+        add(list, "temperament", Mth.clamp((s.count(Trait.CHEERFUL) - s.count(Trait.GRUMPY)) * 2, -10, 10));
+        if (s.deathsTotal() >= 3) {
+            add(list, "cemetery", s.count(BuildingType.CEMETERY) > 0 ? 2 : -5);
+        }
 
         add(list, "taxes", s.tax().happiness());
         int laws = 0;

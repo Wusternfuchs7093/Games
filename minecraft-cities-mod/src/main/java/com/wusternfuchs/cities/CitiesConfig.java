@@ -131,6 +131,18 @@ public final class CitiesConfig {
             .defineInRange("droughtChance", 0.003, 0.0, 1.0);
 
     static {
+        BUILDER.pop().push("people");
+    }
+
+    public static final ModConfigSpec.IntValue LIFESPAN_DAYS = BUILDER
+            .comment("In-game days a villager lives before dying of old age. 0 means villagers never age.")
+            .defineInRange("lifespanDays", 60, 0, 10000);
+
+    public static final ModConfigSpec.BooleanValue NAME_VILLAGERS = BUILDER
+            .comment("If true, villagers in settlements get names from their culture (shown when you look at them).")
+            .define("nameVillagers", true);
+
+    static {
         BUILDER.pop().push("display");
     }
 
