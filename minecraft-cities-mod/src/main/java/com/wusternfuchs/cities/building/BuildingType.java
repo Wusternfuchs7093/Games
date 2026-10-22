@@ -19,7 +19,9 @@ public enum BuildingType {
     MARKET(4, true, Blueprints::market),
     TOWN_HALL(1, true, Blueprints::townHall),
     WATCHTOWER(1, true, Blueprints::watchtower),
-    LAMP(1, false, Blueprints::lamp);
+    LAMP(1, false, Blueprints::lamp),
+    /** Ring wall around the town; laid out from the terrain, its variant is the radius. */
+    WALL(1, false, (palette, variant) -> new Blueprint.Builder(1, 1, 1).build());
 
     private static final Map<String, Blueprint> CACHE = new HashMap<>();
 
@@ -79,11 +81,13 @@ public enum BuildingType {
         if (level >= SettlementTier.CITY.ordinal()) {
             required.put(MARKET, 2);
             required.put(WATCHTOWER, 2);
+            required.put(WALL, 1);
         }
         if (level >= SettlementTier.METROPOLIS.ordinal()) {
             required.put(MARKET, 3);
             required.put(WATCHTOWER, 4);
             required.put(WELL, 2);
+            required.put(WALL, 2);
         }
         if (level >= SettlementTier.CAPITAL.ordinal()) {
             required.put(MARKET, 4);

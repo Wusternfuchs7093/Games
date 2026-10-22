@@ -46,8 +46,12 @@ public final class TownPlanner {
 
     /** Tries to start building {@code type}. Returns false if no suitable land was found. */
     public static boolean start(ServerLevel level, SettlementData data, Settlement s, BuildingType type) {
-        int variant = level.getRandom().nextInt(type.variants());
-        Building building = findSite(level, data, s, type, variant);
+        Building building;
+        if (type == BuildingType.WALL) {
+            building = new Building(BuildingType.WALL, s.center(), Rotation.NONE, wallRadius(s));
+        } else {
+            building = findSite(level, data, s, type, level.getRandom().nextInt(type.variants()));
+        }
         if (building == null) {
             return false;
         }
@@ -68,6 +72,9 @@ public final class TownPlanner {
         boolean canGrow = next != null && (CitiesConfig.IGNORE_POTENTIAL.get() || next.ordinal() <= s.maxTier().ordinal());
         if (canGrow) {
             for (Map.Entry<BuildingType, Integer> entry : BuildingType.requiredFor(next).entrySet()) {
+                if (entry.getKey() == BuildingType.WALL && hasWallAt(s, wallRadius(s))) {
+                    continue; // the next wall needs a bigger territory
+                }
                 if (s.count(entry.getKey()) < entry.getValue()) {
                     return entry.getKey();
                 }
@@ -86,6 +93,10 @@ public final class TownPlanner {
         if (s.workstations() < s.adults() && s.count(BuildingType.WORKSHOP) < 1 + s.population() / 4) {
             return BuildingType.WORKSHOP;
         }
+        if (s.tier().ordinal() >= SettlementTier.SMALL_TOWN.ordinal() && !hasWallAt(s, wallRadius(s))
+                && s.count(BuildingType.WALL) < 2) {
+            return BuildingType.WALL;
+        }
         if (canGrow) {
             double scale = CitiesConfig.POPULATION_SCALE.get();
             if (s.beds() < next.minBeds(scale) + 2) {
@@ -100,6 +111,20 @@ public final class TownPlanner {
             return BuildingType.LAMP;
         }
         return null;
+    }
+
+    /** Walls go just inside the edge of the current territory. */
+    public static int wallRadius(Settlement s) {
+        return s.tier().radiusChunks() * 16 - 6;
+    }
+
+    private static boolean hasWallAt(Settlement s, int radius) {
+        for (Building building : s.buildings()) {
+            if (building.type() == BuildingType.WALL && building.variant() == radius) {
+                return true;
+            }
+        }
+        return false;
     }
 
     // ------------------------------------------------------------------ site search

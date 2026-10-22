@@ -91,5 +91,21 @@
   "cities.command.not_building": "Здесь ничего не строится.",
   "cities.command.buildings.header": "Здания поселения %s: %s",
   "cities.command.build_started": "Началась стройка: %s в точке %s, %s, %s.",
-  "cities.command.build_cancelled": "Стройка отменена."
+  "cities.command.build_cancelled": "Стройка отменена.",
+  "entity.cities.guard": "Стражник",
+  "cities.building.wall": "Городская стена",
+  "cities.history.guard_hired": "в стражу принят новый стражник",
+  "cities.history.siege": "напал отряд разбойников (%s)",
+  "cities.history.siege_repelled": "разбойники отбиты",
+  "cities.history.plundered": "разбойники разграбили поселение",
+  "cities.siege.title": "Набег!",
+  "cities.siege.subtitle": "На %s напали разбойники: %s",
+  "cities.siege.started": "Разбойники (%2$s) идут на %1$s!",
+  "cities.siege.repelled": "%s отбил набег разбойников!",
+  "cities.siege.plundered": "Разбойники разграбили %s и унесли четверть запасов.",
+  "cities.info.guards": "Стража: %s / %s",
+  "cities.info.siege": "Идёт набег! Осталось разбойников: %s",
+  "cities.command.siege_failed": "Не удалось начать набег (он уже идёт или разбойникам негде собраться).",
+  "cities.command.hire_failed": "Не удалось нанять стражника.",
+  "cities.command.guard_hired": "В %s нанят стражник."
 }

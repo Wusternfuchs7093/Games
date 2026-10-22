@@ -91,5 +91,21 @@
   "cities.command.not_building": "Nothing is being built here.",
   "cities.command.buildings.header": "Buildings of %s: %s",
   "cities.command.build_started": "Construction of %s started at %s, %s, %s.",
-  "cities.command.build_cancelled": "Construction cancelled."
+  "cities.command.build_cancelled": "Construction cancelled.",
+  "entity.cities.guard": "Guard",
+  "cities.building.wall": "Town wall",
+  "cities.history.guard_hired": "a new guard joined the watch",
+  "cities.history.siege": "a band of %s raiders attacked",
+  "cities.history.siege_repelled": "the raiders were driven off",
+  "cities.history.plundered": "the raiders plundered the town",
+  "cities.siege.title": "Raid!",
+  "cities.siege.subtitle": "%s is under attack: %s raiders",
+  "cities.siege.started": "Raiders (%2$s) are marching on %1$s!",
+  "cities.siege.repelled": "%s has driven off the raiders!",
+  "cities.siege.plundered": "Raiders plundered %s and left with a quarter of its stocks.",
+  "cities.info.guards": "Guards: %s / %s",
+  "cities.info.siege": "Under attack! Raiders left: %s",
+  "cities.command.siege_failed": "Could not start a raid here (one is already going on, or no place for the raiders to gather).",
+  "cities.command.hire_failed": "Could not hire a guard.",
+  "cities.command.guard_hired": "A guard joined %s."
 }

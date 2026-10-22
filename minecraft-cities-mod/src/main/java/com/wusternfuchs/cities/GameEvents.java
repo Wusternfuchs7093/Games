@@ -1,12 +1,16 @@
 package com.wusternfuchs.cities;
 
 import com.wusternfuchs.cities.command.CityCommands;
+import com.wusternfuchs.cities.defense.DefenseManager;
 import com.wusternfuchs.cities.settlement.SettlementManager;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.entity.npc.AbstractVillager;
 import net.minecraft.world.entity.npc.Villager;
+import net.minecraft.world.entity.raid.Raider;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.neoforge.event.RegisterCommandsEvent;
+import net.neoforged.neoforge.event.entity.living.LivingDamageEvent;
 import net.neoforged.neoforge.event.entity.living.LivingDeathEvent;
 import net.neoforged.neoforge.event.entity.player.PlayerEvent;
 import net.neoforged.neoforge.event.tick.LevelTickEvent;
@@ -37,9 +41,21 @@ public final class GameEvents {
 
     @SubscribeEvent
     public static void onLivingDeath(LivingDeathEvent event) {
-        if (event.getEntity() instanceof Villager villager && villager.level() instanceof ServerLevel level) {
-            ServerPlayer killer = event.getSource().getEntity() instanceof ServerPlayer p ? p : null;
+        if (!(event.getEntity().level() instanceof ServerLevel level)) {
+            return;
+        }
+        ServerPlayer killer = event.getSource().getEntity() instanceof ServerPlayer p ? p : null;
+        if (event.getEntity() instanceof Villager villager) {
             SettlementManager.onVillagerDeath(level, villager, killer);
+        } else if (event.getEntity() instanceof Raider raider) {
+            DefenseManager.onRaiderDeath(level, raider, killer);
+        }
+    }
+
+    @SubscribeEvent
+    public static void onLivingDamage(LivingDamageEvent.Post event) {
+        if (event.getEntity() instanceof AbstractVillager villager && villager.level() instanceof ServerLevel level) {
+            DefenseManager.onVillagerAttacked(level, villager, event.getSource().getEntity());
         }
     }
 

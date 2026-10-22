@@ -67,6 +67,22 @@ public final class CitiesConfig {
             .define("freeConstruction", false);
 
     static {
+        BUILDER.pop().push("defense");
+    }
+
+    public static final ModConfigSpec.BooleanValue GUARDS_ENABLED = BUILDER
+            .comment("If true, settlements hire guards with their wealth.")
+            .define("guardsEnabled", true);
+
+    public static final ModConfigSpec.BooleanValue SIEGES_ENABLED = BUILDER
+            .comment("If true, bands of raiders attack settlements at night while a player is inside.")
+            .define("siegesEnabled", true);
+
+    public static final ModConfigSpec.DoubleValue SIEGE_CHANCE = BUILDER
+            .comment("Chance per night-time census and per settlement tier that a siege starts.")
+            .defineInRange("siegeChancePerTier", 0.01, 0.0, 1.0);
+
+    static {
         BUILDER.pop().push("display");
     }
 

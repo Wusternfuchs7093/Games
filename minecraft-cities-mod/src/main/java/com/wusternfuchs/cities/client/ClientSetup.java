@@ -1,0 +1,19 @@
+package com.wusternfuchs.cities.client;
+
+import com.wusternfuchs.cities.CitiesMod;
+import com.wusternfuchs.cities.entity.CitiesEntities;
+import net.neoforged.api.distmarker.Dist;
+import net.neoforged.bus.api.SubscribeEvent;
+import net.neoforged.fml.common.EventBusSubscriber;
+import net.neoforged.neoforge.client.event.EntityRenderersEvent;
+
+@EventBusSubscriber(modid = CitiesMod.MODID, bus = EventBusSubscriber.Bus.MOD, value = Dist.CLIENT)
+public final class ClientSetup {
+    private ClientSetup() {
+    }
+
+    @SubscribeEvent
+    public static void registerRenderers(EntityRenderersEvent.RegisterRenderers event) {
+        event.registerEntityRenderer(CitiesEntities.GUARD.get(), GuardRenderer::new);
+    }
+}

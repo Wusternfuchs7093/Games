@@ -44,7 +44,9 @@ import javax.annotation.Nullable;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.Deque;
+import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Set;
 
 /** Turns a planned building into real blocks, one at a time, by the hands of a villager. */
 public final class ConstructionManager {
@@ -68,20 +70,31 @@ public final class ConstructionManager {
             project.setQueue(planSteps(level, data, s, building, bp), level.getGameTime());
         }
 
+        Deque<List<Placement>> queue = project.queue();
+        while (!queue.isEmpty() && isDone(level, queue.peek())) {
+            queue.poll();
+        }
+        if (queue.isEmpty()) {
+            complete(level, data, s, project);
+            return;
+        }
+        List<Placement> next = queue.peek();
+        BlockPos target = next.get(0).pos();
+        if (!level.isLoaded(target)) {
+            return;
+        }
+
         Villager builder = builder(level, data, s, project, bp);
         if (builder == null || builder.isSleeping()) {
             return;
         }
-
-        BoundingBox box = building.bounds(bp);
-        BlockPos site = box.getCenter();
-        double dx = builder.getX() - (site.getX() + 0.5);
-        double dz = builder.getZ() - (site.getZ() + 0.5);
-        double reach = WORK_DISTANCE + Math.max(box.getXSpan(), box.getZSpan()) / 2.0;
-        if (dx * dx + dz * dz > reach * reach) {
-            walkTo(builder, site);
+        // The builder walks to whatever block comes next, so long walls get built along their whole length.
+        double dx = builder.getX() - (target.getX() + 0.5);
+        double dz = builder.getZ() - (target.getZ() + 0.5);
+        if (dx * dx + dz * dz > WORK_DISTANCE * WORK_DISTANCE) {
+            walkTo(builder, target);
             if (level.getGameTime() - project.lastNearSite() > TELEPORT_AFTER_TICKS) {
-                BlockPos spot = standingSpot(level, building, bp);
+                BlockPos spot = standingSpot(level, s, building, bp, target);
                 builder.teleportTo(spot.getX() + 0.5, spot.getY(), spot.getZ() + 0.5);
                 project.setLastNearSite(level.getGameTime());
             }
@@ -89,16 +102,6 @@ public final class ConstructionManager {
         }
         project.setLastNearSite(level.getGameTime());
 
-        Deque<List<Placement>> queue = project.queue();
-        while (!queue.isEmpty() && isDone(level, queue.peek())) {
-            queue.poll();
-        }
-        if (queue.isEmpty()) {
-            complete(level, data, s, project, builder);
-            return;
-        }
-
-        List<Placement> next = queue.peek();
         int cost = 0;
         for (Placement placement : next) {
             if (placement.costs()) {
@@ -158,13 +161,14 @@ public final class ConstructionManager {
         }
     }
 
-    private static void complete(ServerLevel level, SettlementData data, Settlement s, ConstructionProject project,
-                                 Villager builder) {
+    private static void complete(ServerLevel level, SettlementData data, Settlement s, ConstructionProject project) {
         Building building = project.building();
         s.addBuilding(building);
         s.setProject(null);
         s.record(SettlementManager.day(level), "built", building.type().id());
-        builder.setItemSlot(EquipmentSlot.MAINHAND, ItemStack.EMPTY);
+        if (project.builder() != null && level.getEntity(project.builder()) instanceof Villager builder) {
+            builder.setItemSlot(EquipmentSlot.MAINHAND, ItemStack.EMPTY);
+        }
         data.setDirty();
 
         Component message = Component.translatable("cities.construction.finished", s.name(),
@@ -211,10 +215,18 @@ public final class ConstructionManager {
         villager.getBrain().setMemory(MemoryModuleType.WALK_TARGET, new WalkTarget(target, 0.6f, 3));
     }
 
-    /** Ground in front of the building, or next to it for buildings without a door. */
-    private static BlockPos standingSpot(ServerLevel level, Building building, Blueprint bp) {
-        BlockPos entrance = building.entrance(bp);
-        BlockPos base = entrance != null ? entrance : building.toWorld(new BlockPos(-1, 0, -1));
+    /** Somewhere to stand while working on {@code target}: the door, a corner, or inside a wall. */
+    private static BlockPos standingSpot(ServerLevel level, Settlement s, Building building, Blueprint bp,
+                                         BlockPos target) {
+        BlockPos base;
+        if (building.type() == BuildingType.WALL) {
+            BlockPos center = s.center();
+            base = target.offset(2 * Integer.signum(center.getX() - target.getX()), 0,
+                    2 * Integer.signum(center.getZ() - target.getZ()));
+        } else {
+            BlockPos entrance = building.entrance(bp);
+            base = entrance != null ? entrance : building.toWorld(new BlockPos(-1, 0, -1));
+        }
         return level.getHeightmapPos(Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, base);
     }
 
@@ -228,6 +240,9 @@ public final class ConstructionManager {
     static List<List<Placement>> planSteps(ServerLevel level, SettlementData data, Settlement s, Building building,
                                            Blueprint bp) {
         Palette palette = Palette.of(s.style());
+        if (building.type() == BuildingType.WALL) {
+            return planWall(level, s, building, palette);
+        }
         List<List<Placement>> clearing = new ArrayList<>();
         List<List<Placement>> foundation = new ArrayList<>();
         List<List<Placement>> structure = new ArrayList<>();
@@ -285,6 +300,51 @@ public final class ConstructionManager {
         steps.addAll(details);
         if (building.type().hasRoad()) {
             steps.addAll(planRoad(level, data, s, building, bp, palette));
+        }
+        return steps;
+    }
+
+    /**
+     * A ring wall around the center at the radius stored in the building's variant. It follows the ground,
+     * skips water and anything built, and leaves gates on the four main directions and wherever roads cross.
+     */
+    private static List<List<Placement>> planWall(ServerLevel level, Settlement s, Building building, Palette palette) {
+        List<List<Placement>> steps = new ArrayList<>();
+        BlockPos center = s.center();
+        int radius = building.variant();
+        boolean stone = s.tier().ordinal() >= SettlementTier.CITY.ordinal();
+        BlockState wall = stone ? palette.foundation() : palette.pillar();
+        int height = stone ? 4 : 3;
+
+        Set<Long> ring = new LinkedHashSet<>();
+        int points = (int) Math.ceil(2 * Math.PI * radius * 2);
+        for (int i = 0; i < points; i++) {
+            double angle = 2 * Math.PI * i / points;
+            ring.add(BlockPos.asLong(center.getX() + (int) Math.round(Math.cos(angle) * radius), 0,
+                    center.getZ() + (int) Math.round(Math.sin(angle) * radius)));
+        }
+
+        for (long key : ring) {
+            int x = BlockPos.getX(key);
+            int z = BlockPos.getZ(key);
+            if (Math.abs(x - center.getX()) <= 1 || Math.abs(z - center.getZ()) <= 1) {
+                continue; // gates
+            }
+            BlockPos column = new BlockPos(x, center.getY(), z);
+            if (!level.isLoaded(column)) {
+                continue;
+            }
+            BlockPos ground = level.getHeightmapPos(Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, column).below();
+            while (level.getBlockState(ground).is(wall.getBlock()) && ground.getY() > level.getMinBuildHeight()) {
+                ground = ground.below();
+            }
+            BlockState surface = level.getBlockState(ground);
+            if (!level.getFluidState(ground).isEmpty() || !TownPlanner.isBuildableGround(surface)) {
+                continue; // water, roads, fields, houses
+            }
+            for (int y = 1; y <= height; y++) {
+                steps.add(List.of(new Placement(ground.above(y), wall, true)));
+            }
         }
         return steps;
     }

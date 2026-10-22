@@ -11,6 +11,7 @@ import com.wusternfuchs.cities.building.Building;
 import com.wusternfuchs.cities.building.BuildingType;
 import com.wusternfuchs.cities.building.ConstructionProject;
 import com.wusternfuchs.cities.building.TownPlanner;
+import com.wusternfuchs.cities.defense.DefenseManager;
 import com.wusternfuchs.cities.settlement.HistoryEntry;
 import com.wusternfuchs.cities.settlement.ReputationRank;
 import com.wusternfuchs.cities.settlement.Requirement;
@@ -58,6 +59,10 @@ public final class CityCommands {
             new SimpleCommandExceptionType(Component.translatable("cities.command.busy"));
     private static final SimpleCommandExceptionType NO_SITE =
             new SimpleCommandExceptionType(Component.translatable("cities.command.no_site"));
+    private static final SimpleCommandExceptionType SIEGE_FAILED =
+            new SimpleCommandExceptionType(Component.translatable("cities.command.siege_failed"));
+    private static final SimpleCommandExceptionType HIRE_FAILED =
+            new SimpleCommandExceptionType(Component.translatable("cities.command.hire_failed"));
     private static final SimpleCommandExceptionType NOT_BUILDING =
             new SimpleCommandExceptionType(Component.translatable("cities.command.not_building"));
 
@@ -94,6 +99,8 @@ public final class CityCommands {
                                 .suggests(BUILDING_IDS)
                                 .executes(CityCommands::build)))
                 .then(Commands.literal("cancelbuild").executes(CityCommands::cancelBuild))
+                .then(Commands.literal("siege").executes(CityCommands::siege))
+                .then(Commands.literal("hireguard").executes(CityCommands::hireGuard))
                 .then(Commands.literal("remove").executes(CityCommands::remove))
                 .then(Commands.literal("tp")
                         .then(Commands.argument("name", StringArgumentType.greedyString())
@@ -204,6 +211,13 @@ public final class CityCommands {
                     project.building().type().displayName(), project.percent()).withStyle(ChatFormatting.AQUA), false);
         }
 
+        source.sendSuccess(() -> Component.translatable("cities.info.guards", s.guards(),
+                DefenseManager.wantedGuards(s)), false);
+        if (s.siege() != null) {
+            source.sendSuccess(() -> Component.translatable("cities.info.siege", s.siege().attackers().size())
+                    .withStyle(ChatFormatting.RED), false);
+        }
+
         if (source.getEntity() instanceof ServerPlayer player) {
             int rep = s.reputation(player.getUUID());
             source.sendSuccess(() -> Component.translatable("cities.info.reputation",
@@ -296,6 +310,25 @@ public final class CityCommands {
         BlockPos origin = building.origin();
         ctx.getSource().sendSuccess(() -> Component.translatable("cities.command.build_started", type.displayName(),
                 origin.getX(), origin.getY(), origin.getZ()), true);
+        return 1;
+    }
+
+    private static int siege(CommandContext<CommandSourceStack> ctx) throws CommandSyntaxException {
+        Settlement s = inside(ctx);
+        if (!DefenseManager.maybeStartSiege(ctx.getSource().getLevel(), data(ctx), s, true)) {
+            throw SIEGE_FAILED.create();
+        }
+        return 1;
+    }
+
+    private static int hireGuard(CommandContext<CommandSourceStack> ctx) throws CommandSyntaxException {
+        Settlement s = inside(ctx);
+        if (DefenseManager.hireGuard(ctx.getSource().getLevel(), s) == null) {
+            throw HIRE_FAILED.create();
+        }
+        s.setGuards(s.guards() + 1);
+        data(ctx).setDirty();
+        ctx.getSource().sendSuccess(() -> Component.translatable("cities.command.guard_hired", s.name()), true);
         return 1;
     }
 

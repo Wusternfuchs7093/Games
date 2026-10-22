@@ -3,6 +3,7 @@ package com.wusternfuchs.cities.settlement;
 import com.wusternfuchs.cities.building.Building;
 import com.wusternfuchs.cities.building.BuildingType;
 import com.wusternfuchs.cities.building.ConstructionProject;
+import com.wusternfuchs.cities.defense.Siege;
 import it.unimi.dsi.fastutil.longs.LongOpenHashSet;
 import it.unimi.dsi.fastutil.longs.LongSet;
 import it.unimi.dsi.fastutil.objects.Object2IntMap;
@@ -43,6 +44,7 @@ public final class Settlement {
     private int employed;
     private int foodProducers;
     private int golems;
+    private int guards;
     private boolean censusDone;
 
     // Economy and mood
@@ -63,6 +65,9 @@ public final class Settlement {
     private final List<Building> buildings = new ArrayList<>();
     @Nullable
     private ConstructionProject project;
+    @Nullable
+    private Siege siege;
+    private long lastSiegeDay = -100;
 
     public Settlement(UUID id, BlockPos center, String name, ArchitectureStyle style, int potential, long foundedDay) {
         this.id = id;
@@ -152,6 +157,31 @@ public final class Settlement {
 
     public int golems() {
         return golems;
+    }
+
+    public int guards() {
+        return guards;
+    }
+
+    public void setGuards(int guards) {
+        this.guards = guards;
+    }
+
+    @Nullable
+    public Siege siege() {
+        return siege;
+    }
+
+    public void setSiege(@Nullable Siege siege) {
+        this.siege = siege;
+    }
+
+    public long lastSiegeDay() {
+        return lastSiegeDay;
+    }
+
+    public void setLastSiegeDay(long day) {
+        this.lastSiegeDay = day;
     }
 
     public boolean censusDone() {
@@ -305,6 +335,7 @@ public final class Settlement {
         tag.putInt("employed", employed);
         tag.putInt("foodProducers", foodProducers);
         tag.putInt("golems", golems);
+        tag.putInt("guards", guards);
         tag.putBoolean("censusDone", censusDone);
 
         tag.putInt("food", food);
@@ -332,6 +363,10 @@ public final class Settlement {
         if (project != null) {
             tag.put("project", project.save());
         }
+        if (siege != null) {
+            tag.put("siege", siege.save());
+        }
+        tag.putLong("lastSiegeDay", lastSiegeDay);
         return tag;
     }
 
@@ -349,6 +384,7 @@ public final class Settlement {
         s.employed = tag.getInt("employed");
         s.foodProducers = tag.getInt("foodProducers");
         s.golems = tag.getInt("golems");
+        s.guards = tag.getInt("guards");
         s.censusDone = tag.getBoolean("censusDone");
 
         s.food = tag.getInt("food");
@@ -387,6 +423,12 @@ public final class Settlement {
         }
         if (tag.contains("project", Tag.TAG_COMPOUND)) {
             s.project = ConstructionProject.load(tag.getCompound("project"));
+        }
+        if (tag.contains("siege", Tag.TAG_COMPOUND)) {
+            s.siege = Siege.load(tag.getCompound("siege"));
+        }
+        if (tag.contains("lastSiegeDay")) {
+            s.lastSiegeDay = tag.getLong("lastSiegeDay");
         }
         return s;
     }

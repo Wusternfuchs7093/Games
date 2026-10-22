@@ -5,6 +5,7 @@ import com.wusternfuchs.cities.CitiesMod;
 import com.wusternfuchs.cities.building.BuildingType;
 import com.wusternfuchs.cities.building.ConstructionManager;
 import com.wusternfuchs.cities.building.TownPlanner;
+import com.wusternfuchs.cities.defense.DefenseManager;
 import net.minecraft.ChatFormatting;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;
@@ -46,6 +47,7 @@ public final class SettlementManager {
     private static final int REPUTATION_KILL_VILLAGER = -25;
     private static final int STARTING_FOOD = 50;
     private static final int STARTING_MATERIALS = 64;
+    private static final int SIEGE_TICK_INTERVAL = 40;
 
     /** Settlement each online player stood in last time we checked, for enter/leave titles. */
     private static final Map<UUID, UUID> PLAYER_LOCATIONS = new HashMap<>();
@@ -69,6 +71,14 @@ public final class SettlementManager {
             for (Settlement settlement : new ArrayList<>(data.all())) {
                 if (settlement.project() != null && level.isPositionEntityTicking(settlement.center())) {
                     ConstructionManager.step(level, data, settlement);
+                }
+            }
+        }
+        if (time % SIEGE_TICK_INTERVAL == 0) {
+            SettlementData data = SettlementData.get(level);
+            for (Settlement settlement : new ArrayList<>(data.all())) {
+                if (settlement.siege() != null && level.isPositionEntityTicking(settlement.center())) {
+                    DefenseManager.tickSiege(level, data, settlement);
                 }
             }
         }
@@ -170,8 +180,10 @@ public final class SettlementManager {
         runEconomy(s);
         updateHappiness(level, s);
         migrate(level, data, s);
+        DefenseManager.updateGarrison(level, data, s);
         updateTier(level, data, s);
         TownPlanner.plan(level, data, s);
+        DefenseManager.maybeStartSiege(level, data, s, false);
         data.setDirty();
     }
 
@@ -233,6 +245,7 @@ public final class SettlementManager {
             target += (int) Math.round(15.0 * s.employed() / s.adults()) - 5;
         }
         target += Math.min(10, s.golems() * 5);
+        target += Math.min(15, s.guards() * 3);
         target += Math.min(9, s.count(BuildingType.WATCHTOWER) * 3);
         target += Math.min(10, s.count(BuildingType.MARKET) * 5);
         target += s.count(BuildingType.WELL) > 0 ? 5 : 0;
@@ -339,6 +352,7 @@ public final class SettlementManager {
         s.setTier(tier);
         s.setDecline(0);
         data.updateTerritory(s);
+        DefenseManager.refitGuards(level, s);
         s.record(day(level), promotion ? "promoted" : "demoted", tier.id());
 
         Component message = Component.translatable(promotion ? "cities.announce.promoted" : "cities.announce.demoted",
@@ -397,7 +411,7 @@ public final class SettlementManager {
         PLAYER_LOCATIONS.remove(player.getUUID());
     }
 
-    private static void showTitle(ServerPlayer player, Component title, Component subtitle) {
+    public static void showTitle(ServerPlayer player, Component title, Component subtitle) {
         player.connection.send(new ClientboundSetTitlesAnimationPacket(10, 50, 15));
         player.connection.send(new ClientboundSetSubtitleTextPacket(subtitle));
         player.connection.send(new ClientboundSetTitleTextPacket(title));
