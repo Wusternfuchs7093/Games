@@ -4,6 +4,8 @@ import com.wusternfuchs.cities.building.Building;
 import com.wusternfuchs.cities.building.BuildingType;
 import com.wusternfuchs.cities.building.ConstructionProject;
 import com.wusternfuchs.cities.defense.Siege;
+import com.wusternfuchs.cities.governance.Law;
+import com.wusternfuchs.cities.governance.TaxRate;
 import it.unimi.dsi.fastutil.longs.LongOpenHashSet;
 import it.unimi.dsi.fastutil.longs.LongSet;
 import it.unimi.dsi.fastutil.objects.Object2IntMap;
@@ -12,6 +14,7 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.ListTag;
 import net.minecraft.nbt.NbtUtils;
+import net.minecraft.nbt.StringTag;
 import net.minecraft.nbt.Tag;
 import net.minecraft.util.Mth;
 import net.minecraft.world.level.ChunkPos;
@@ -19,7 +22,11 @@ import net.minecraft.world.level.ChunkPos;
 import javax.annotation.Nullable;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.EnumSet;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 
 /** Persistent state of one village, town or city. */
@@ -70,6 +77,17 @@ public final class Settlement {
     private Siege siege;
     private long lastSiegeDay = -100;
 
+    // Government
+    @Nullable
+    private UUID mayor;
+    private String mayorName = "";
+    private final Set<Law> laws = EnumSet.noneOf(Law.class);
+    private TaxRate tax = TaxRate.NORMAL;
+    private long lastElectionDay;
+    private final Map<UUID, String> candidates = new LinkedHashMap<>();
+    private int festivalCensuses;
+    private long lastFestivalDay = -100;
+
     public Settlement(UUID id, BlockPos center, String name, ArchitectureStyle style, int potential, long foundedDay) {
         this.id = id;
         this.center = center.immutable();
@@ -77,6 +95,7 @@ public final class Settlement {
         this.style = style;
         this.potential = potential;
         this.foundedDay = foundedDay;
+        this.lastElectionDay = foundedDay;
     }
 
     public UUID id() {
@@ -183,6 +202,65 @@ public final class Settlement {
 
     public void setLastSiegeDay(long day) {
         this.lastSiegeDay = day;
+    }
+
+    /** The player governing the settlement, or null when the council of elders rules. */
+    @Nullable
+    public UUID mayor() {
+        return mayor;
+    }
+
+    public String mayorName() {
+        return mayorName;
+    }
+
+    public void setMayor(@Nullable UUID mayor, String name) {
+        this.mayor = mayor;
+        this.mayorName = mayor == null ? "" : name;
+    }
+
+    public Set<Law> laws() {
+        return laws;
+    }
+
+    public boolean hasLaw(Law law) {
+        return laws.contains(law);
+    }
+
+    public TaxRate tax() {
+        return tax;
+    }
+
+    public void setTax(TaxRate tax) {
+        this.tax = tax;
+    }
+
+    public long lastElectionDay() {
+        return lastElectionDay;
+    }
+
+    public void setLastElectionDay(long day) {
+        this.lastElectionDay = day;
+    }
+
+    public Map<UUID, String> candidates() {
+        return candidates;
+    }
+
+    public int festivalCensuses() {
+        return festivalCensuses;
+    }
+
+    public void setFestivalCensuses(int censuses) {
+        this.festivalCensuses = censuses;
+    }
+
+    public long lastFestivalDay() {
+        return lastFestivalDay;
+    }
+
+    public void setLastFestivalDay(long day) {
+        this.lastFestivalDay = day;
     }
 
     public boolean censusDone() {
@@ -385,6 +463,21 @@ public final class Settlement {
             tag.put("siege", siege.save());
         }
         tag.putLong("lastSiegeDay", lastSiegeDay);
+
+        if (mayor != null) {
+            tag.putUUID("mayor", mayor);
+            tag.putString("mayorName", mayorName);
+        }
+        ListTag lawList = new ListTag();
+        laws.forEach(law -> lawList.add(StringTag.valueOf(law.id())));
+        tag.put("laws", lawList);
+        tag.putString("tax", tax.id());
+        tag.putLong("lastElection", lastElectionDay);
+        CompoundTag running = new CompoundTag();
+        candidates.forEach((id, candidate) -> running.putString(id.toString(), candidate));
+        tag.put("candidates", running);
+        tag.putInt("festival", festivalCensuses);
+        tag.putLong("lastFestival", lastFestivalDay);
         return tag;
     }
 
@@ -456,6 +549,32 @@ public final class Settlement {
         }
         if (tag.contains("lastSiegeDay")) {
             s.lastSiegeDay = tag.getLong("lastSiegeDay");
+        }
+
+        if (tag.hasUUID("mayor")) {
+            s.setMayor(tag.getUUID("mayor"), tag.getString("mayorName"));
+        }
+        ListTag lawList = tag.getList("laws", Tag.TAG_STRING);
+        for (int i = 0; i < lawList.size(); i++) {
+            Law law = Law.byId(lawList.getString(i));
+            if (law != null) {
+                s.laws.add(law);
+            }
+        }
+        TaxRate tax = TaxRate.byId(tag.getString("tax"));
+        s.tax = tax == null ? TaxRate.NORMAL : tax;
+        s.lastElectionDay = tag.contains("lastElection") ? tag.getLong("lastElection") : s.foundedDay;
+        CompoundTag running = tag.getCompound("candidates");
+        for (String key : running.getAllKeys()) {
+            try {
+                s.candidates.put(UUID.fromString(key), running.getString(key));
+            } catch (IllegalArgumentException ignored) {
+                // Skip a corrupted entry.
+            }
+        }
+        s.festivalCensuses = tag.getInt("festival");
+        if (tag.contains("lastFestival")) {
+            s.lastFestivalDay = tag.getLong("lastFestival");
         }
         return s;
     }

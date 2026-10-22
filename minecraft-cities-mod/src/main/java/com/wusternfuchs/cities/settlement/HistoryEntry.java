@@ -9,6 +9,8 @@ public record HistoryEntry(long day, String key, String argument) {
         Object arg = switch (key) {
             case "promoted", "demoted" -> Component.translatable("cities.tier." + argument);
             case "construction", "built" -> Component.translatable("cities.building." + argument);
+            case "law_enacted", "law_repealed" -> Component.translatable("cities.law." + argument);
+            case "elected" -> argument.equals("-") ? Component.translatable("cities.mayor.council") : argument;
             default -> argument;
         };
         return Component.translatable("cities.history.line", day,

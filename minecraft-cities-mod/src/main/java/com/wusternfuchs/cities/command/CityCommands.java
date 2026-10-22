@@ -1,6 +1,7 @@
 package com.wusternfuchs.cities.command;
 
 import com.mojang.brigadier.CommandDispatcher;
+import com.mojang.brigadier.arguments.BoolArgumentType;
 import com.mojang.brigadier.arguments.IntegerArgumentType;
 import com.mojang.brigadier.arguments.StringArgumentType;
 import com.mojang.brigadier.builder.LiteralArgumentBuilder;
@@ -15,6 +16,10 @@ import com.wusternfuchs.cities.building.TownPlanner;
 import com.wusternfuchs.cities.defense.DefenseManager;
 import com.wusternfuchs.cities.diplomacy.DiplomacyManager;
 import com.wusternfuchs.cities.diplomacy.Relation;
+import com.wusternfuchs.cities.governance.GovernanceManager;
+import com.wusternfuchs.cities.governance.Law;
+import com.wusternfuchs.cities.governance.TaxRate;
+import com.wusternfuchs.cities.CitiesConfig;
 import com.wusternfuchs.cities.trade.Caravan;
 import com.wusternfuchs.cities.trade.TradeManager;
 import com.wusternfuchs.cities.settlement.HistoryEntry;
@@ -35,6 +40,9 @@ import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.Items;
+import net.minecraft.world.level.block.Block;
+import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.levelgen.Heightmap;
 
 import java.util.Arrays;
@@ -68,6 +76,24 @@ public final class CityCommands {
             new SimpleCommandExceptionType(Component.translatable("cities.command.siege_failed"));
     private static final SimpleCommandExceptionType HIRE_FAILED =
             new SimpleCommandExceptionType(Component.translatable("cities.command.hire_failed"));
+    private static final SimpleCommandExceptionType NOT_MAYOR =
+            new SimpleCommandExceptionType(Component.translatable("cities.command.not_mayor"));
+    private static final SimpleCommandExceptionType NEED_BELL =
+            new SimpleCommandExceptionType(Component.translatable("cities.command.need_bell"));
+    private static final SimpleCommandExceptionType FOUNDING_DISABLED =
+            new SimpleCommandExceptionType(Component.translatable("cities.command.founding_disabled"));
+    private static final SimpleCommandExceptionType LOW_REPUTATION =
+            new SimpleCommandExceptionType(Component.translatable("cities.command.low_reputation"));
+    private static final SimpleCommandExceptionType TOO_SMALL =
+            new SimpleCommandExceptionType(Component.translatable("cities.command.too_small"));
+    private static final SimpleCommandExceptionType UNKNOWN_LAW =
+            new SimpleCommandExceptionType(Component.translatable("cities.command.unknown_law"));
+    private static final SimpleCommandExceptionType UNKNOWN_TAX =
+            new SimpleCommandExceptionType(Component.translatable("cities.command.unknown_tax"));
+    private static final SimpleCommandExceptionType CANNOT_AFFORD =
+            new SimpleCommandExceptionType(Component.translatable("cities.command.cannot_afford"));
+    private static final SimpleCommandExceptionType NOTHING_CHANGED =
+            new SimpleCommandExceptionType(Component.translatable("cities.command.nothing_changed"));
     private static final SimpleCommandExceptionType NOT_BUILDING =
             new SimpleCommandExceptionType(Component.translatable("cities.command.not_building"));
 
@@ -77,6 +103,12 @@ public final class CityCommands {
 
     private static final SuggestionProvider<CommandSourceStack> TIER_IDS = (ctx, builder) ->
             SharedSuggestionProvider.suggest(Arrays.stream(SettlementTier.values()).map(SettlementTier::id), builder);
+
+    private static final SuggestionProvider<CommandSourceStack> LAW_IDS = (ctx, builder) ->
+            SharedSuggestionProvider.suggest(Arrays.stream(Law.values()).map(Law::id), builder);
+
+    private static final SuggestionProvider<CommandSourceStack> TAX_IDS = (ctx, builder) ->
+            SharedSuggestionProvider.suggest(Arrays.stream(TaxRate.values()).map(TaxRate::id), builder);
 
     private static final SuggestionProvider<CommandSourceStack> BUILDING_IDS = (ctx, builder) ->
             SharedSuggestionProvider.suggest(Arrays.stream(BuildingType.values()).map(BuildingType::id), builder);
@@ -106,6 +138,7 @@ public final class CityCommands {
                 .then(Commands.literal("cancelbuild").executes(CityCommands::cancelBuild))
                 .then(Commands.literal("siege").executes(CityCommands::siege))
                 .then(Commands.literal("hireguard").executes(CityCommands::hireGuard))
+                .then(Commands.literal("election").executes(CityCommands::forceElection))
                 .then(Commands.literal("relation")
                         .then(Commands.argument("value", IntegerArgumentType.integer(-100, 100))
                                 .then(Commands.argument("name", StringArgumentType.greedyString())
@@ -145,6 +178,33 @@ public final class CityCommands {
                                 .suggests(SETTLEMENT_NAMES)
                                 .executes(ctx -> relations(ctx, named(ctx)))))
                 .then(Commands.literal("donate").executes(CityCommands::donate))
+                .then(Commands.literal("found")
+                        .then(Commands.argument("name", StringArgumentType.greedyString())
+                                .executes(CityCommands::found)))
+                .then(Commands.literal("run").executes(CityCommands::run))
+                .then(Commands.literal("resign").executes(CityCommands::resign))
+                .then(Commands.literal("laws")
+                        .executes(ctx -> laws(ctx, here(ctx)))
+                        .then(Commands.argument("name", StringArgumentType.greedyString())
+                                .suggests(SETTLEMENT_NAMES)
+                                .executes(ctx -> laws(ctx, named(ctx)))))
+                .then(Commands.literal("law")
+                        .then(Commands.argument("law", StringArgumentType.word())
+                                .suggests(LAW_IDS)
+                                .then(Commands.argument("active", BoolArgumentType.bool())
+                                        .executes(CityCommands::law))))
+                .then(Commands.literal("tax")
+                        .then(Commands.argument("rate", StringArgumentType.word())
+                                .suggests(TAX_IDS)
+                                .executes(CityCommands::tax)))
+                .then(Commands.literal("festival").executes(CityCommands::festival))
+                .then(Commands.literal("treasury")
+                        .then(Commands.argument("emeralds", IntegerArgumentType.integer(1, 64))
+                                .executes(CityCommands::treasury)))
+                .then(Commands.literal("order")
+                        .then(Commands.argument("building", StringArgumentType.word())
+                                .suggests(BUILDING_IDS)
+                                .executes(CityCommands::order)))
                 .then(admin));
     }
 
@@ -222,6 +282,8 @@ public final class CityCommands {
                 s.foodProducers(), s.golems()), false);
         source.sendSuccess(() -> Component.translatable("cities.info.economy", s.food(), s.materials(),
                 s.wealth(), s.happiness()), false);
+        source.sendSuccess(() -> Component.translatable("cities.info.mayor", GovernanceManager.mayorName(s),
+                s.tax().displayName(), s.laws().size()), false);
         source.sendSuccess(() -> Component.translatable("cities.info.territory", s.chunks().size(),
                 s.buildings().size()), false);
         ConstructionProject project = s.project();
@@ -331,6 +393,184 @@ public final class CityCommands {
             source.sendSuccess(() -> Component.translatable("cities.command.relations.none"), false);
         }
         return shown;
+    }
+
+    // ------------------------------------------------------------------ government
+
+    /** The settlement the player stands in, if the player rules it (operators may act as any mayor). */
+    private static Settlement governed(CommandContext<CommandSourceStack> ctx) throws CommandSyntaxException {
+        ServerPlayer player = ctx.getSource().getPlayerOrException();
+        Settlement s = inside(ctx);
+        if (!GovernanceManager.isMayor(s, player) && !ctx.getSource().hasPermission(2)) {
+            throw NOT_MAYOR.create();
+        }
+        return s;
+    }
+
+    private static int found(CommandContext<CommandSourceStack> ctx) throws CommandSyntaxException {
+        if (!CitiesConfig.PLAYER_FOUNDING.get()) {
+            throw FOUNDING_DISABLED.create();
+        }
+        ServerPlayer player = ctx.getSource().getPlayerOrException();
+        if (!player.getMainHandItem().is(Items.BELL)) {
+            throw NEED_BELL.create();
+        }
+        ServerLevel level = ctx.getSource().getLevel();
+        SettlementData data = data(ctx);
+        String name = StringArgumentType.getString(ctx, "name");
+        if (data.isNameTaken(name)) {
+            throw NAME_TAKEN.create();
+        }
+        BlockPos pos = player.blockPosition();
+        if (!SettlementManager.canFoundAt(level, data, pos)) {
+            throw TOO_CLOSE.create();
+        }
+        player.getMainHandItem().shrink(1);
+        // The charter bell becomes the heart of the new town, right in front of its founder.
+        BlockPos bell = pos.relative(player.getDirection());
+        if (level.getBlockState(bell).canBeReplaced() && !level.getBlockState(bell.below()).isAir()) {
+            level.setBlock(bell, Blocks.BELL.defaultBlockState(), Block.UPDATE_ALL);
+        }
+        Settlement s = SettlementManager.found(level, data, pos, name);
+        s.setMayor(player.getUUID(), player.getGameProfile().getName());
+        s.changeReputation(player.getUUID(), 20);
+        s.record(SettlementManager.day(level), "founded_by", player.getGameProfile().getName());
+        data.setDirty();
+        ctx.getSource().sendSuccess(() -> Component.translatable("cities.command.founded", s.name())
+                .withStyle(ChatFormatting.GOLD), true);
+        return 1;
+    }
+
+    private static int run(CommandContext<CommandSourceStack> ctx) throws CommandSyntaxException {
+        ServerPlayer player = ctx.getSource().getPlayerOrException();
+        Settlement s = inside(ctx);
+        if (s.tier().ordinal() < SettlementTier.VILLAGE.ordinal()) {
+            throw TOO_SMALL.create();
+        }
+        if (ReputationRank.of(s.reputation(player.getUUID())).ordinal() < ReputationRank.FRIEND.ordinal()) {
+            throw LOW_REPUTATION.create();
+        }
+        GovernanceManager.addCandidate(s, player);
+        data(ctx).setDirty();
+        long daysLeft = Math.max(0, s.lastElectionDay() + CitiesConfig.ELECTION_INTERVAL_DAYS.get()
+                - SettlementManager.day(ctx.getSource().getLevel()));
+        ctx.getSource().sendSuccess(() -> Component.translatable("cities.command.running", s.name(), daysLeft), false);
+        return 1;
+    }
+
+    private static int resign(CommandContext<CommandSourceStack> ctx) throws CommandSyntaxException {
+        ServerPlayer player = ctx.getSource().getPlayerOrException();
+        Settlement s = inside(ctx);
+        if (!GovernanceManager.isMayor(s, player)) {
+            throw NOT_MAYOR.create();
+        }
+        s.setMayor(null, "");
+        s.record(SettlementManager.day(ctx.getSource().getLevel()), "resigned", player.getGameProfile().getName());
+        data(ctx).setDirty();
+        ctx.getSource().sendSuccess(() -> Component.translatable("cities.command.resigned", s.name()), true);
+        return 1;
+    }
+
+    private static int laws(CommandContext<CommandSourceStack> ctx, Settlement s) {
+        CommandSourceStack source = ctx.getSource();
+        source.sendSuccess(() -> Component.translatable("cities.command.laws.header", s.name(),
+                GovernanceManager.mayorName(s)).withStyle(ChatFormatting.GOLD), false);
+        source.sendSuccess(() -> Component.translatable("cities.command.laws.tax", s.tax().displayName()), false);
+        for (Law law : Law.values()) {
+            boolean active = s.hasLaw(law);
+            source.sendSuccess(() -> Component.literal(active ? "  ● " : "  ○ ")
+                    .withStyle(active ? ChatFormatting.GREEN : ChatFormatting.DARK_GRAY)
+                    .append(law.displayName().copy().withStyle(ChatFormatting.WHITE))
+                    .append(Component.literal(" (" + law.id() + "): ").withStyle(ChatFormatting.DARK_GRAY))
+                    .append(law.description().copy().withStyle(ChatFormatting.GRAY)), false);
+        }
+        return s.laws().size();
+    }
+
+    private static int law(CommandContext<CommandSourceStack> ctx) throws CommandSyntaxException {
+        Settlement s = governed(ctx);
+        Law law = Law.byId(StringArgumentType.getString(ctx, "law"));
+        if (law == null) {
+            throw UNKNOWN_LAW.create();
+        }
+        boolean active = BoolArgumentType.getBool(ctx, "active");
+        if (!GovernanceManager.setLaw(ctx.getSource().getLevel(), s, law, active)) {
+            throw NOTHING_CHANGED.create();
+        }
+        data(ctx).setDirty();
+        ctx.getSource().sendSuccess(() -> Component.translatable(active
+                ? "cities.command.law_enacted" : "cities.command.law_repealed", law.displayName(), s.name()), true);
+        return 1;
+    }
+
+    private static int tax(CommandContext<CommandSourceStack> ctx) throws CommandSyntaxException {
+        Settlement s = governed(ctx);
+        TaxRate rate = TaxRate.byId(StringArgumentType.getString(ctx, "rate"));
+        if (rate == null) {
+            throw UNKNOWN_TAX.create();
+        }
+        s.setTax(rate);
+        data(ctx).setDirty();
+        ctx.getSource().sendSuccess(() -> Component.translatable("cities.command.tax_set", s.name(),
+                rate.displayName()), true);
+        return 1;
+    }
+
+    private static int festival(CommandContext<CommandSourceStack> ctx) throws CommandSyntaxException {
+        Settlement s = governed(ctx);
+        if (!GovernanceManager.canAffordFestival(s)) {
+            throw CANNOT_AFFORD.create();
+        }
+        GovernanceManager.startFestival(ctx.getSource().getLevel(), s);
+        data(ctx).setDirty();
+        return 1;
+    }
+
+    /** The mayor takes emeralds out of the treasury. The townsfolk notice. */
+    private static int treasury(CommandContext<CommandSourceStack> ctx) throws CommandSyntaxException {
+        Settlement s = governed(ctx);
+        ServerPlayer player = ctx.getSource().getPlayerOrException();
+        int emeralds = IntegerArgumentType.getInteger(ctx, "emeralds");
+        int cost = emeralds * GovernanceManager.WEALTH_PER_EMERALD;
+        if (s.wealth() < cost) {
+            throw CANNOT_AFFORD.create();
+        }
+        s.addWealth(-cost);
+        s.setHappiness(s.happiness() - Math.max(1, cost / 30));
+        s.record(SettlementManager.day(ctx.getSource().getLevel()), "treasury", player.getGameProfile().getName());
+        data(ctx).setDirty();
+        ItemStack stack = new ItemStack(Items.EMERALD, emeralds);
+        if (!player.getInventory().add(stack)) {
+            player.drop(stack, false);
+        }
+        ctx.getSource().sendSuccess(() -> Component.translatable("cities.command.treasury", emeralds, s.name()), false);
+        return emeralds;
+    }
+
+    private static int order(CommandContext<CommandSourceStack> ctx) throws CommandSyntaxException {
+        Settlement s = governed(ctx);
+        BuildingType type = BuildingType.byId(StringArgumentType.getString(ctx, "building"));
+        if (type == null) {
+            throw UNKNOWN_BUILDING.create();
+        }
+        if (s.project() != null) {
+            throw BUSY.create();
+        }
+        if (!TownPlanner.start(ctx.getSource().getLevel(), data(ctx), s, type)) {
+            throw NO_SITE.create();
+        }
+        BlockPos origin = s.project().building().origin();
+        ctx.getSource().sendSuccess(() -> Component.translatable("cities.command.build_started", type.displayName(),
+                origin.getX(), origin.getY(), origin.getZ()), false);
+        return 1;
+    }
+
+    private static int forceElection(CommandContext<CommandSourceStack> ctx) throws CommandSyntaxException {
+        Settlement s = inside(ctx);
+        GovernanceManager.holdElection(ctx.getSource().getLevel(), data(ctx), s);
+        ctx.getSource().sendSuccess(() -> Component.translatable("cities.command.election_held", s.name(),
+                GovernanceManager.mayorName(s)), true);
+        return 1;
     }
 
     private static int donate(CommandContext<CommandSourceStack> ctx) throws CommandSyntaxException {

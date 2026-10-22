@@ -7,6 +7,8 @@ import com.wusternfuchs.cities.building.ConstructionManager;
 import com.wusternfuchs.cities.building.TownPlanner;
 import com.wusternfuchs.cities.defense.DefenseManager;
 import com.wusternfuchs.cities.diplomacy.DiplomacyManager;
+import com.wusternfuchs.cities.governance.GovernanceManager;
+import com.wusternfuchs.cities.governance.Law;
 import com.wusternfuchs.cities.trade.TradeManager;
 import net.minecraft.ChatFormatting;
 import net.minecraft.core.BlockPos;
@@ -51,6 +53,7 @@ public final class SettlementManager {
     private static final int STARTING_MATERIALS = 64;
     private static final int SIEGE_TICK_INTERVAL = 40;
     private static final int CARAVAN_TICK_INTERVAL = 100;
+    private static final int FESTIVAL_TICK_INTERVAL = 10;
 
     /** Settlement each online player stood in last time we checked, for enter/leave titles. */
     private static final Map<UUID, UUID> PLAYER_LOCATIONS = new HashMap<>();
@@ -74,6 +77,9 @@ public final class SettlementManager {
             for (Settlement settlement : new ArrayList<>(data.all())) {
                 if (settlement.project() != null && level.isPositionEntityTicking(settlement.center())) {
                     ConstructionManager.step(level, data, settlement);
+                    if (settlement.hasLaw(Law.BUILDING_PROGRAM) && settlement.project() != null) {
+                        ConstructionManager.step(level, data, settlement);
+                    }
                 }
             }
         }
@@ -84,6 +90,9 @@ public final class SettlementManager {
                     DefenseManager.tickSiege(level, data, settlement);
                 }
             }
+        }
+        if (time % FESTIVAL_TICK_INTERVAL == 0) {
+            GovernanceManager.tickFestivals(level, SettlementData.get(level));
         }
         if (time % CARAVAN_TICK_INTERVAL == 0) {
             TradeManager.resolveArrivals(level, SettlementData.get(level));
@@ -182,6 +191,7 @@ public final class SettlementManager {
 
     public static void simulate(ServerLevel level, SettlementData data, Settlement s) {
         census(level, data, s);
+        GovernanceManager.govern(level, data, s);
         ConstructionManager.collectStorage(level, s);
         runEconomy(s);
         updateHappiness(level, s);
@@ -239,10 +249,19 @@ public final class SettlementManager {
      */
     private static void runEconomy(Settlement s) {
         int produced = s.foodProducers() * 6 + s.adults() / 2;
-        s.addFood(produced - s.population() * CitiesConfig.FOOD_PER_VILLAGER.get());
-        s.addWealth(s.employed());
+        int eaten = s.population() * CitiesConfig.FOOD_PER_VILLAGER.get();
+        if (s.hasLaw(Law.RATIONING)) {
+            eaten /= 2;
+        }
+        s.addFood(produced - eaten);
+        s.addWealth(s.tax().collect(s.employed()));
         int idle = s.adults() - s.employed();
-        s.addMaterials(s.employed() + idle * 2);
+        int gathered = s.employed() + idle * 2;
+        if (s.hasLaw(Law.BUILDING_PROGRAM)) {
+            gathered += gathered / 2;
+            s.addWealth(-2);
+        }
+        s.addMaterials(gathered);
     }
 
     private static void updateHappiness(ServerLevel level, Settlement s) {
@@ -257,6 +276,7 @@ public final class SettlementManager {
         target += Math.min(9, s.count(BuildingType.WATCHTOWER) * 3);
         target += Math.min(10, s.count(BuildingType.MARKET) * 5);
         target += s.count(BuildingType.WELL) > 0 ? 5 : 0;
+        target += GovernanceManager.happinessModifier(s);
         if (s.food() <= 0) {
             target -= 25;
         } else if (s.food() >= s.population() * 20) {
@@ -273,6 +293,9 @@ public final class SettlementManager {
 
     /** Prosperous towns attract newcomers; miserable ones lose people. */
     private static void migrate(ServerLevel level, SettlementData data, Settlement s) {
+        if (s.hasLaw(Law.CLOSED_BORDERS)) {
+            return;
+        }
         RandomSource random = level.getRandom();
         boolean prosperous = s.happiness() >= 60 && s.beds() > s.population() && s.food() >= s.population() * 5;
         if (prosperous && s.tier().ordinal() >= SettlementTier.VILLAGE.ordinal()

@@ -3,6 +3,7 @@ package com.wusternfuchs.cities.trade;
 import com.wusternfuchs.cities.CitiesConfig;
 import com.wusternfuchs.cities.building.BuildingType;
 import com.wusternfuchs.cities.diplomacy.DiplomacyManager;
+import com.wusternfuchs.cities.governance.Law;
 import com.wusternfuchs.cities.settlement.Settlement;
 import com.wusternfuchs.cities.settlement.SettlementData;
 import com.wusternfuchs.cities.settlement.SettlementManager;
@@ -66,7 +67,8 @@ public final class TradeManager {
     }
 
     public static boolean canTrade(Settlement s) {
-        return !s.abandoned() && s.count(BuildingType.WAREHOUSE) + s.count(BuildingType.MARKET) > 0;
+        return !s.abandoned() && !s.hasLaw(Law.CLOSED_BORDERS)
+                && s.count(BuildingType.WAREHOUSE) + s.count(BuildingType.MARKET) > 0;
     }
 
     public static int maxCaravans(Settlement s) {
@@ -100,7 +102,7 @@ public final class TradeManager {
             int bestAmount = 0;
             int bestPrice = 0;
             for (Settlement other : data.all()) {
-                if (other == s || other.abandoned() || !DiplomacyManager.inRange(s, other)
+                if (other == s || other.abandoned() || other.hasLaw(Law.CLOSED_BORDERS) || !DiplomacyManager.inRange(s, other)
                         || !DiplomacyManager.relation(s, other).allowsTrade() || isExpecting(data, other, stock)) {
                     continue;
                 }

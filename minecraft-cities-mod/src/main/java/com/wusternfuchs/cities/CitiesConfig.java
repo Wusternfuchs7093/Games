@@ -95,6 +95,18 @@ public final class CitiesConfig {
             .defineInRange("robberyChance", 0.15, 0.0, 1.0);
 
     static {
+        BUILDER.pop().push("government");
+    }
+
+    public static final ModConfigSpec.IntValue ELECTION_INTERVAL_DAYS = BUILDER
+            .comment("In-game days between elections. Elections only happen if a player is running or rules.")
+            .defineInRange("electionIntervalDays", 7, 1, 365);
+
+    public static final ModConfigSpec.BooleanValue PLAYER_FOUNDING = BUILDER
+            .comment("If true, players may found their own settlement with a bell and /city found.")
+            .define("allowPlayerFounding", true);
+
+    static {
         BUILDER.pop().push("display");
     }
 

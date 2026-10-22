@@ -6,6 +6,7 @@ import com.wusternfuchs.cities.diplomacy.DiplomacyManager;
 import com.wusternfuchs.cities.diplomacy.Relation;
 import com.wusternfuchs.cities.entity.CitiesEntities;
 import com.wusternfuchs.cities.entity.Guard;
+import com.wusternfuchs.cities.governance.Law;
 import com.wusternfuchs.cities.settlement.Settlement;
 import com.wusternfuchs.cities.settlement.SettlementData;
 import com.wusternfuchs.cities.settlement.SettlementManager;
@@ -51,7 +52,8 @@ public final class DefenseManager {
     // ------------------------------------------------------------------ garrison
 
     public static int wantedGuards(Settlement s) {
-        return GUARDS_PER_TIER[s.tier().ordinal()] + s.count(BuildingType.WATCHTOWER);
+        int wanted = GUARDS_PER_TIER[s.tier().ordinal()] + s.count(BuildingType.WATCHTOWER);
+        return s.hasLaw(Law.CONSCRIPTION) ? wanted * 2 : wanted;
     }
 
     private static int patrolRadius(Settlement s) {
@@ -134,6 +136,12 @@ public final class DefenseManager {
             // Hostile neighbours pay bandits to harass the town.
             int enemies = DiplomacyManager.withRelation(data, s, Relation.HOSTILE).size();
             double chance = CitiesConfig.SIEGE_CHANCE.get() * s.tier().ordinal() * (1 + enemies);
+            if (s.hasLaw(Law.CURFEW)) {
+                chance *= 0.5;
+            }
+            if (s.hasLaw(Law.CLOSED_BORDERS)) {
+                chance *= 0.75;
+            }
             if (!CitiesConfig.SIEGES_ENABLED.get() || s.abandoned()
                     || s.tier().ordinal() < SettlementTier.VILLAGE.ordinal() || level.isDay()
                     || day - s.lastSiegeDay() < SIEGE_COOLDOWN_DAYS || !playerInside(level, data, s)
