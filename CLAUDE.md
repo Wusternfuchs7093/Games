@@ -52,6 +52,12 @@ This file is the hand-off between sessions. **Read it first, update it at the en
   tab), `CityView` (fills each tab by running the matching `/city <tab>` command with a capturing CommandSource),
   `CitiesNetwork` (payload registration). `client/CityScreen` (tabs + action buttons), `ClientEvents` (key K),
   `ClientHooks` (client-only entry point from the network handler). `settlement/BorderDisplay` (border particles).
+- `data/` — datapack reload listeners: `CustomBlueprints` (`data/<ns>/cities/buildings/*.json` + structure `.nbt`
+  → extra variants of a building type, picked via `BuildingType.variantCount/blueprint`), `CultureNames`
+  (`data/<ns>/cities/names/<culture>.json`). Registered in `GameEvents.onAddReloadListeners`.
+  Example datapack: `minecraft-cities-mod/examples/cities-example-datapack`.
+- `api/` — `CitiesApi` (queries) and `SettlementEvent` (Founded, TierChanged, BuildingCompleted, SiegeStarted,
+  WarDeclared) posted on `NeoForge.EVENT_BUS`. Keep these stable: other mods may depend on them.
 - A new screen tab = add the id to `CityViewPayload.TABS` (must be a `/city <id>` command or special-cased in
   `CityView`) and `cities.gui.tab.<id>` in both lang files.
 - Translations: `assets/cities/lang/en_us.json` and `ru_ru.json` — add every new key to **both**.
@@ -69,11 +75,14 @@ This file is the hand-off between sessions. **Read it first, update it at the en
 Done stages (all compile in CI, none tested in game):
 1 core settlements · 2 construction · 3 guards/walls/raids · 4 trade/diplomacy · 5 government ·
 6 research/eras/stone · 7 wars/vassals · 8 disasters/mood · 9 residents · 10 job board/houses/tavern/mercenaries ·
-11 cultures/highways/ruins/old towns · 12 city screen (K, /city gui), /city borders, /city chronicle.
+11 cultures/highways/ruins/old towns · 12 city screen (K, /city gui), /city borders, /city chronicle ·
+13 datapack buildings/names, multiplayer options (protectBuildings, maxTownsPerPlayer, allowPlayerWars),
+API events, /city admin stats. **All 13 planned stages are done.**
 
-In progress / next:
-- 13 technical base: datapack-driven buildings/professions, multiplayer permissions, API for other mods.
-- Then: in-game testing and bug fixing with the user.
+Next:
+- In-game testing and bug fixing with the user (top priority).
+- Ideas not built yet (from MECHANICS.md): JourneyMap/Xaero markers, families/inheritance, guilds, banks/loans,
+  mail, sea trade/ports, Nether/End settlements, seasons, schools/universities beyond the library.
 
 ## Known risks to check first when the user tests
 - Building rotation (doors, beds, stairs) and builder pathing/teleporting.
