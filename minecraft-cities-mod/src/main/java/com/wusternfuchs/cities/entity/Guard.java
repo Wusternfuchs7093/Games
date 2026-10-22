@@ -3,6 +3,7 @@ package com.wusternfuchs.cities.entity;
 import com.wusternfuchs.cities.settlement.ReputationRank;
 import com.wusternfuchs.cities.settlement.Settlement;
 import com.wusternfuchs.cities.settlement.SettlementData;
+import com.wusternfuchs.cities.settlement.SettlementManager;
 import com.wusternfuchs.cities.settlement.SettlementTier;
 import com.wusternfuchs.cities.war.WarManager;
 import net.minecraft.network.chat.Component;
@@ -51,6 +52,10 @@ public class Guard extends PathfinderMob {
     private int patrolRadius = 32;
     /** Soldiers are sent to fight another town; they go home (vanish) when the battle ends. */
     private boolean soldier;
+    /** A mercenary follows and protects the player who hired them until the contract runs out. */
+    @Nullable
+    private UUID owner;
+    private long companionUntilDay;
 
     public Guard(EntityType<? extends Guard> type, Level level) {
         super(type, level);
@@ -105,9 +110,60 @@ public class Guard extends PathfinderMob {
         return soldier;
     }
 
+    public void becomeCompanion(Player player, long untilDay) {
+        this.owner = player.getUUID();
+        this.companionUntilDay = untilDay;
+        clearRestriction();
+        setCustomName(Component.translatable("cities.mercenary.name", player.getName()));
+    }
+
+    @Nullable
+    public UUID owner() {
+        return owner;
+    }
+
+    public boolean isCompanion() {
+        return owner != null;
+    }
+
+    /** Keeps up with the owner and joins their fights. */
+    private void followOwner(ServerLevel serverLevel) {
+        if (SettlementManager.day(serverLevel) > companionUntilDay) {
+            Player master = serverLevel.getPlayerByUUID(owner);
+            if (master != null) {
+                master.displayClientMessage(Component.translatable("cities.mercenary.left"), true);
+            }
+            discard();
+            return;
+        }
+        Player master = serverLevel.getPlayerByUUID(owner);
+        if (master == null || master.isSpectator()) {
+            return;
+        }
+        double distance = distanceToSqr(master);
+        if (distance > 24 * 24) {
+            teleportTo(master.getX() + 1, master.getY(), master.getZ() + 1);
+            getNavigation().stop();
+            return;
+        }
+        LivingEntity threat = master.getLastHurtByMob();
+        if (threat == null || !threat.isAlive() || threat == this) {
+            threat = master.getLastHurtMob();
+        }
+        if (threat != null && threat.isAlive() && threat != this && !isAlliedTo(threat) && getTarget() == null) {
+            setTarget(threat);
+        }
+        if (getTarget() == null && distance > 6 * 6) {
+            getNavigation().moveTo(master, 1.1);
+        }
+    }
+
     /** Guards of the same town never fight each other, and do not rally against each other either. */
     @Override
     public boolean isAlliedTo(Entity entity) {
+        if (owner != null && owner.equals(entity.getUUID())) {
+            return true;
+        }
         if (entity instanceof Guard other && settlementId != null && Objects.equals(other.settlementId, settlementId)) {
             return true;
         }
@@ -148,6 +204,7 @@ public class Guard extends PathfinderMob {
     /** Players the town considers enemies are attacked on sight. */
     private boolean isOutlaw(LivingEntity entity) {
         if (!(entity instanceof ServerPlayer player) || player.isCreative() || player.isSpectator()
+                || player.getUUID().equals(owner)
                 || !(level() instanceof ServerLevel serverLevel) || settlementId == null) {
             return false;
         }
@@ -158,6 +215,9 @@ public class Guard extends PathfinderMob {
     @Override
     public void tick() {
         super.tick();
+        if (owner != null && tickCount % 10 == 0 && level() instanceof ServerLevel serverLevel) {
+            followOwner(serverLevel);
+        }
         if (!level().isClientSide && tickCount % HEAL_INTERVAL == 0 && getTarget() == null
                 && getHealth() < getMaxHealth()) {
             heal(1.0f);
@@ -178,6 +238,10 @@ public class Guard extends PathfinderMob {
         tag.put("Post", NbtUtils.writeBlockPos(post));
         tag.putInt("PatrolRadius", patrolRadius);
         tag.putBoolean("Soldier", soldier);
+        if (owner != null) {
+            tag.putUUID("Owner", owner);
+            tag.putLong("CompanionUntil", companionUntilDay);
+        }
     }
 
     @Override
@@ -187,6 +251,10 @@ public class Guard extends PathfinderMob {
         post = NbtUtils.readBlockPos(tag, "Post").orElse(blockPosition());
         patrolRadius = tag.contains("PatrolRadius") ? tag.getInt("PatrolRadius") : 32;
         soldier = tag.getBoolean("Soldier");
-        restrictTo(post, patrolRadius);
+        owner = tag.hasUUID("Owner") ? tag.getUUID("Owner") : null;
+        companionUntilDay = tag.getLong("CompanionUntil");
+        if (owner == null) {
+            restrictTo(post, patrolRadius);
+        }
     }
 }

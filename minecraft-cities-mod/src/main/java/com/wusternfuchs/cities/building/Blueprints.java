@@ -122,6 +122,24 @@ public final class Blueprints {
         }).build();
     }
 
+    /** Tables with stools, barrels and a fireplace corner: where rumours are told and swords are hired. */
+    public static Blueprint tavern(Palette p, int variant) {
+        return hall(p, 9, 7, b -> {
+            BlockState table = p.fence();
+            BlockState top = Blocks.OAK_PRESSURE_PLATE.defaultBlockState();
+            for (int x : new int[]{2, 6}) {
+                b.set(x, 1, 3, table);
+                b.set(x, 2, 3, top);
+                b.set(x - 1, 1, 3, p.wallStairs().defaultBlockState().setValue(StairBlock.FACING, Direction.EAST));
+                b.set(x + 1, 1, 3, p.wallStairs().defaultBlockState().setValue(StairBlock.FACING, Direction.WEST));
+            }
+            b.set(1, 1, 1, Blocks.BARREL.defaultBlockState());
+            b.set(7, 1, 1, Blocks.BARREL.defaultBlockState());
+            b.set(3, 1, 1, Blocks.SMOKER.defaultBlockState().setValue(BlockStateProperties.HORIZONTAL_FACING, Direction.SOUTH));
+            b.set(5, 1, 1, Blocks.CRAFTING_TABLE.defaultBlockState());
+        }).build();
+    }
+
     /** A fenced graveyard: stones and flowers in two rows along a gravel path. */
     public static Blueprint cemetery(Palette p, int variant) {
         Blueprint.Builder b = new Blueprint.Builder(7, 3, 7);

@@ -61,7 +61,7 @@ public final class TownPlanner {
             return false;
         }
         for (Building building : s.buildings()) {
-            if (!building.stone() && building.type().upgradable()) {
+            if (!building.stone() && building.type().upgradable() && !s.houseOwners().containsKey(building.origin())) {
                 s.setProject(new ConstructionProject(building.inStone()));
                 s.record(SettlementManager.day(level), "upgrade", building.type().id());
                 data.setDirty();
@@ -127,6 +127,9 @@ public final class TownPlanner {
         int elite = s.count(SocialClass.ELITE);
         if (s.tier().ordinal() >= SettlementTier.TOWNSHIP.ordinal() && s.count(BuildingType.MANOR) * 2 < elite) {
             return BuildingType.MANOR;
+        }
+        if (s.tier().ordinal() >= SettlementTier.TOWNSHIP.ordinal() && s.count(BuildingType.TAVERN) == 0) {
+            return BuildingType.TAVERN;
         }
         if (s.tier().ordinal() >= SettlementTier.TOWNSHIP.ordinal() && s.count(BuildingType.LIBRARY) == 0) {
             return BuildingType.LIBRARY;

@@ -8,6 +8,8 @@ import com.wusternfuchs.cities.governance.Law;
 import com.wusternfuchs.cities.governance.TaxRate;
 import com.wusternfuchs.cities.people.SocialClass;
 import com.wusternfuchs.cities.people.Trait;
+import com.wusternfuchs.cities.quest.Contract;
+import com.wusternfuchs.cities.quest.Request;
 import com.wusternfuchs.cities.research.Era;
 import com.wusternfuchs.cities.research.Tech;
 import it.unimi.dsi.fastutil.longs.LongOpenHashSet;
@@ -120,6 +122,12 @@ public final class Settlement {
     private int[] classes = new int[SocialClass.values().length];
     private int[] traits = new int[Trait.values().length];
     private int deathsTotal;
+
+    // Players and the town
+    private final List<Contract> contracts = new ArrayList<>();
+    private int nextContractId = 1;
+    private final List<Request> requests = new ArrayList<>();
+    private final Map<BlockPos, UUID> houseOwners = new HashMap<>();
 
     public Settlement(UUID id, BlockPos center, String name, ArchitectureStyle style, int potential, long foundedDay) {
         this.id = id;
@@ -370,6 +378,23 @@ public final class Settlement {
     public void setPeople(int[] classes, int[] traits) {
         this.classes = classes.clone();
         this.traits = traits.clone();
+    }
+
+    public List<Contract> contracts() {
+        return contracts;
+    }
+
+    public int nextContractId() {
+        return nextContractId++;
+    }
+
+    public List<Request> requests() {
+        return requests;
+    }
+
+    /** Owners of houses players bought, keyed by the building's origin. */
+    public Map<BlockPos, UUID> houseOwners() {
+        return houseOwners;
     }
 
     /** Everyone who ever died in the settlement. */
@@ -692,6 +717,21 @@ public final class Settlement {
         tag.putIntArray("classes", classes);
         tag.putIntArray("traits", traits);
         tag.putInt("deathsTotal", deathsTotal);
+        ListTag board = new ListTag();
+        contracts.forEach(c -> board.add(c.save()));
+        tag.put("contracts", board);
+        tag.putInt("nextContract", nextContractId);
+        ListTag wishes = new ListTag();
+        requests.forEach(r -> wishes.add(r.save()));
+        tag.put("requests", wishes);
+        ListTag owned = new ListTag();
+        houseOwners.forEach((pos, owner) -> {
+            CompoundTag entry = new CompoundTag();
+            entry.put("pos", NbtUtils.writeBlockPos(pos));
+            entry.putUUID("owner", owner);
+            owned.add(entry);
+        });
+        tag.put("houseOwners", owned);
         tag.putInt("epidemic", epidemic);
         tag.putInt("sick", sick);
         tag.putInt("drought", drought);
@@ -819,6 +859,30 @@ public final class Settlement {
             s.traits = savedTraits;
         }
         s.deathsTotal = tag.getInt("deathsTotal");
+        ListTag board = tag.getList("contracts", Tag.TAG_COMPOUND);
+        for (int i = 0; i < board.size(); i++) {
+            Contract contract = Contract.load(board.getCompound(i));
+            if (contract != null) {
+                s.contracts.add(contract);
+            }
+        }
+        s.nextContractId = Math.max(1, tag.getInt("nextContract"));
+        ListTag wishes = tag.getList("requests", Tag.TAG_COMPOUND);
+        for (int i = 0; i < wishes.size(); i++) {
+            CompoundTag wish = wishes.getCompound(i);
+            if (wish.hasUUID("villager")) {
+                s.requests.add(Request.load(wish));
+            }
+        }
+        ListTag owned = tag.getList("houseOwners", Tag.TAG_COMPOUND);
+        for (int i = 0; i < owned.size(); i++) {
+            CompoundTag entry = owned.getCompound(i);
+            NbtUtils.readBlockPos(entry, "pos").ifPresent(pos -> {
+                if (entry.hasUUID("owner")) {
+                    s.houseOwners.put(pos, entry.getUUID("owner"));
+                }
+            });
+        }
         s.epidemic = tag.getInt("epidemic");
         s.sick = tag.getInt("sick");
         s.drought = tag.getInt("drought");

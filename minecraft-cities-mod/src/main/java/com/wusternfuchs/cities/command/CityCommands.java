@@ -18,6 +18,10 @@ import com.wusternfuchs.cities.diplomacy.DiplomacyManager;
 import com.wusternfuchs.cities.disaster.DisasterManager;
 import com.wusternfuchs.cities.settlement.Mood;
 import com.wusternfuchs.cities.people.SocialClass;
+import com.wusternfuchs.cities.quest.Contract;
+import com.wusternfuchs.cities.quest.QuestManager;
+import com.wusternfuchs.cities.quest.TownServices;
+import com.wusternfuchs.cities.entity.Guard;
 import com.wusternfuchs.cities.people.Trait;
 import com.wusternfuchs.cities.diplomacy.Relation;
 import com.wusternfuchs.cities.governance.GovernanceManager;
@@ -220,6 +224,19 @@ public final class CityCommands {
                                 .executes(CityCommands::found)))
                 .then(Commands.literal("run").executes(CityCommands::run))
                 .then(Commands.literal("wars").executes(CityCommands::wars))
+                .then(Commands.literal("board")
+                        .executes(CityCommands::board)
+                        .then(Commands.literal("deliver")
+                                .then(Commands.argument("id", IntegerArgumentType.integer(1))
+                                        .executes(CityCommands::deliver)))
+                        .then(Commands.literal("take")
+                                .then(Commands.argument("id", IntegerArgumentType.integer(1))
+                                        .executes(CityCommands::takeContract))))
+                .then(Commands.literal("buy").executes(CityCommands::buyHouse))
+                .then(Commands.literal("sell").executes(CityCommands::sellHouse))
+                .then(Commands.literal("rumour").executes(CityCommands::rumour))
+                .then(Commands.literal("hire").executes(CityCommands::hireMercenary))
+                .then(Commands.literal("dismiss").executes(CityCommands::dismiss))
                 .then(Commands.literal("people")
                         .executes(ctx -> people(ctx, here(ctx)))
                         .then(Commands.argument("name", StringArgumentType.greedyString())
@@ -396,6 +413,10 @@ public final class CityCommands {
         }
 
         if (source.getEntity() instanceof ServerPlayer player) {
+            int houses = TownServices.housesOwnedBy(s, player.getUUID());
+            if (houses > 0) {
+                source.sendSuccess(() -> Component.translatable("cities.info.your_houses", houses), false);
+            }
             int rep = s.reputation(player.getUUID());
             source.sendSuccess(() -> Component.translatable("cities.info.reputation",
                     ReputationRank.of(rep).displayName(), rep), false);
@@ -717,6 +738,120 @@ public final class CityCommands {
             source.sendSuccess(factor::describe, false);
         }
         return target;
+    }
+
+    private static CommandSyntaxException failure(String key) {
+        return new SimpleCommandExceptionType(Component.translatable(key)).create();
+    }
+
+    private static int board(CommandContext<CommandSourceStack> ctx) throws CommandSyntaxException {
+        ServerPlayer player = ctx.getSource().getPlayerOrException();
+        QuestManager.showBoard(player, here(ctx), SettlementManager.day(ctx.getSource().getLevel()));
+        return 1;
+    }
+
+    private static Contract contractArg(CommandContext<CommandSourceStack> ctx, Settlement s) throws CommandSyntaxException {
+        Contract contract = QuestManager.contract(s, IntegerArgumentType.getInteger(ctx, "id"));
+        if (contract == null) {
+            throw failure("cities.command.no_contract");
+        }
+        return contract;
+    }
+
+    private static int deliver(CommandContext<CommandSourceStack> ctx) throws CommandSyntaxException {
+        ServerPlayer player = ctx.getSource().getPlayerOrException();
+        Settlement s = inside(ctx);
+        Contract contract = contractArg(ctx, s);
+        if (contract.kind() != Contract.Kind.DELIVER) {
+            throw failure("cities.command.not_delivery");
+        }
+        int delivered = QuestManager.deliver(ctx.getSource().getLevel(), player, s, contract);
+        if (delivered == 0) {
+            throw failure("cities.command.nothing_to_deliver");
+        }
+        data(ctx).setDirty();
+        if (!contract.done()) {
+            ctx.getSource().sendSuccess(() -> Component.translatable("cities.board.delivered", delivered,
+                    contract.remaining()), false);
+        }
+        return delivered;
+    }
+
+    private static int takeContract(CommandContext<CommandSourceStack> ctx) throws CommandSyntaxException {
+        ServerPlayer player = ctx.getSource().getPlayerOrException();
+        Settlement s = inside(ctx);
+        Contract contract = contractArg(ctx, s);
+        if (contract.kind() != Contract.Kind.HUNT) {
+            throw failure("cities.command.not_hunt");
+        }
+        if (contract.taker() != null && !contract.taker().equals(player.getUUID())) {
+            throw failure("cities.command.contract_taken");
+        }
+        contract.setTaker(player.getUUID());
+        data(ctx).setDirty();
+        ctx.getSource().sendSuccess(() -> Component.translatable("cities.board.took", contract.id()), false);
+        return 1;
+    }
+
+    private static int buyHouse(CommandContext<CommandSourceStack> ctx) throws CommandSyntaxException {
+        ServerPlayer player = ctx.getSource().getPlayerOrException();
+        Settlement s = inside(ctx);
+        String error = TownServices.buy(ctx.getSource().getLevel(), player, s);
+        if (error != null) {
+            throw failure(error);
+        }
+        ctx.getSource().sendSuccess(() -> Component.translatable("cities.command.house_bought", s.name())
+                .withStyle(ChatFormatting.GREEN), false);
+        return 1;
+    }
+
+    private static int sellHouse(CommandContext<CommandSourceStack> ctx) throws CommandSyntaxException {
+        ServerPlayer player = ctx.getSource().getPlayerOrException();
+        Settlement s = inside(ctx);
+        String error = TownServices.sell(ctx.getSource().getLevel(), player, s);
+        if (error != null) {
+            throw failure(error);
+        }
+        ctx.getSource().sendSuccess(() -> Component.translatable("cities.command.house_sold"), false);
+        return 1;
+    }
+
+    private static int rumour(CommandContext<CommandSourceStack> ctx) throws CommandSyntaxException {
+        ServerPlayer player = ctx.getSource().getPlayerOrException();
+        Settlement s = inside(ctx);
+        if (s.count(BuildingType.TAVERN) == 0) {
+            throw failure("cities.command.no_tavern");
+        }
+        Component rumour = TownServices.rumour(ctx.getSource().getLevel(), player, s);
+        if (rumour == null) {
+            throw failure("cities.command.not_enough_emeralds");
+        }
+        data(ctx).setDirty();
+        ctx.getSource().sendSuccess(() -> Component.translatable("cities.rumour.prefix").withStyle(ChatFormatting.GOLD)
+                .append(rumour.copy().withStyle(ChatFormatting.YELLOW)), false);
+        return 1;
+    }
+
+    private static int hireMercenary(CommandContext<CommandSourceStack> ctx) throws CommandSyntaxException {
+        ServerPlayer player = ctx.getSource().getPlayerOrException();
+        Settlement s = inside(ctx);
+        String error = TownServices.hireMercenary(ctx.getSource().getLevel(), player, s);
+        if (error != null) {
+            throw failure(error);
+        }
+        data(ctx).setDirty();
+        ctx.getSource().sendSuccess(() -> Component.translatable("cities.command.mercenary_hired",
+                TownServices.MERCENARY_DAYS).withStyle(ChatFormatting.GREEN), false);
+        return 1;
+    }
+
+    private static int dismiss(CommandContext<CommandSourceStack> ctx) throws CommandSyntaxException {
+        ServerPlayer player = ctx.getSource().getPlayerOrException();
+        List<Guard> mercenaries = TownServices.mercenariesOf(ctx.getSource().getLevel(), player);
+        mercenaries.forEach(Guard::discard);
+        ctx.getSource().sendSuccess(() -> Component.translatable("cities.command.mercenary_dismissed",
+                mercenaries.size()), false);
+        return mercenaries.size();
     }
 
     private static int people(CommandContext<CommandSourceStack> ctx, Settlement s) {

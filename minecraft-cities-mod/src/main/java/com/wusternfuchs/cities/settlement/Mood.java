@@ -46,6 +46,7 @@ public final class Mood {
         add(list, "watchtowers", Math.min(9, s.count(BuildingType.WATCHTOWER) * 3));
         add(list, "markets", Math.min(10, s.count(BuildingType.MARKET) * 5));
         add(list, "well", s.count(BuildingType.WELL) > 0 ? 5 : 0);
+        add(list, "tavern", s.count(BuildingType.TAVERN) > 0 ? 3 : 0);
         add(list, "medicine", s.hasTech(Tech.MEDICINE) ? 5 : 0);
 
         // What each class of society expects from its town.

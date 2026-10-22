@@ -11,6 +11,7 @@ import com.wusternfuchs.cities.diplomacy.DiplomacyManager;
 import com.wusternfuchs.cities.governance.GovernanceManager;
 import com.wusternfuchs.cities.governance.Law;
 import com.wusternfuchs.cities.people.ResidentManager;
+import com.wusternfuchs.cities.quest.QuestManager;
 import com.wusternfuchs.cities.people.Trait;
 import com.wusternfuchs.cities.research.ResearchManager;
 import com.wusternfuchs.cities.research.Tech;
@@ -268,6 +269,7 @@ public final class SettlementManager {
         s.applyCensus(adults, children, beds, workstations, employed, foodProducers, golems);
         s.setScholars(scholars);
         ResidentManager.process(level, s, residents);
+        QuestManager.update(level, s, residents);
     }
 
     /**
