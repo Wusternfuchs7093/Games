@@ -83,6 +83,18 @@ public final class CitiesConfig {
             .defineInRange("siegeChancePerTier", 0.01, 0.0, 1.0);
 
     static {
+        BUILDER.pop().push("trade");
+    }
+
+    public static final ModConfigSpec.BooleanValue TRADE_ENABLED = BUILDER
+            .comment("If true, settlements with a warehouse or market send caravans with their surplus.")
+            .define("enabled", true);
+
+    public static final ModConfigSpec.DoubleValue ROBBERY_CHANCE = BUILDER
+            .comment("Chance that a caravan is robbed on the way, before the sender's guards are counted.")
+            .defineInRange("robberyChance", 0.15, 0.0, 1.0);
+
+    static {
         BUILDER.pop().push("display");
     }
 

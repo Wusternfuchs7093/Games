@@ -1,6 +1,7 @@
 package com.wusternfuchs.cities.command;
 
 import com.mojang.brigadier.CommandDispatcher;
+import com.mojang.brigadier.arguments.IntegerArgumentType;
 import com.mojang.brigadier.arguments.StringArgumentType;
 import com.mojang.brigadier.builder.LiteralArgumentBuilder;
 import com.mojang.brigadier.context.CommandContext;
@@ -12,6 +13,10 @@ import com.wusternfuchs.cities.building.BuildingType;
 import com.wusternfuchs.cities.building.ConstructionProject;
 import com.wusternfuchs.cities.building.TownPlanner;
 import com.wusternfuchs.cities.defense.DefenseManager;
+import com.wusternfuchs.cities.diplomacy.DiplomacyManager;
+import com.wusternfuchs.cities.diplomacy.Relation;
+import com.wusternfuchs.cities.trade.Caravan;
+import com.wusternfuchs.cities.trade.TradeManager;
 import com.wusternfuchs.cities.settlement.HistoryEntry;
 import com.wusternfuchs.cities.settlement.ReputationRank;
 import com.wusternfuchs.cities.settlement.Requirement;
@@ -101,6 +106,11 @@ public final class CityCommands {
                 .then(Commands.literal("cancelbuild").executes(CityCommands::cancelBuild))
                 .then(Commands.literal("siege").executes(CityCommands::siege))
                 .then(Commands.literal("hireguard").executes(CityCommands::hireGuard))
+                .then(Commands.literal("relation")
+                        .then(Commands.argument("value", IntegerArgumentType.integer(-100, 100))
+                                .then(Commands.argument("name", StringArgumentType.greedyString())
+                                        .suggests(SETTLEMENT_NAMES)
+                                        .executes(CityCommands::setRelation))))
                 .then(Commands.literal("remove").executes(CityCommands::remove))
                 .then(Commands.literal("tp")
                         .then(Commands.argument("name", StringArgumentType.greedyString())
@@ -124,6 +134,16 @@ public final class CityCommands {
                         .then(Commands.argument("name", StringArgumentType.greedyString())
                                 .suggests(SETTLEMENT_NAMES)
                                 .executes(ctx -> buildings(ctx, named(ctx)))))
+                .then(Commands.literal("trade")
+                        .executes(ctx -> trade(ctx, here(ctx)))
+                        .then(Commands.argument("name", StringArgumentType.greedyString())
+                                .suggests(SETTLEMENT_NAMES)
+                                .executes(ctx -> trade(ctx, named(ctx)))))
+                .then(Commands.literal("relations")
+                        .executes(ctx -> relations(ctx, here(ctx)))
+                        .then(Commands.argument("name", StringArgumentType.greedyString())
+                                .suggests(SETTLEMENT_NAMES)
+                                .executes(ctx -> relations(ctx, named(ctx)))))
                 .then(Commands.literal("donate").executes(CityCommands::donate))
                 .then(admin));
     }
@@ -211,6 +231,10 @@ public final class CityCommands {
                     project.building().type().displayName(), project.percent()).withStyle(ChatFormatting.AQUA), false);
         }
 
+        int caravans = TradeManager.outgoing(data(ctx), s).size();
+        if (caravans > 0) {
+            source.sendSuccess(() -> Component.translatable("cities.info.caravans", caravans), false);
+        }
         source.sendSuccess(() -> Component.translatable("cities.info.guards", s.guards(),
                 DefenseManager.wantedGuards(s)), false);
         if (s.siege() != null) {
@@ -251,6 +275,62 @@ public final class CityCommands {
             source.sendSuccess(entry::describe, false);
         }
         return entries.size();
+    }
+
+    private static int trade(CommandContext<CommandSourceStack> ctx, Settlement s) {
+        CommandSourceStack source = ctx.getSource();
+        SettlementData data = data(ctx);
+        source.sendSuccess(() -> Component.translatable("cities.command.trade.header", s.name())
+                .withStyle(ChatFormatting.GOLD), false);
+        for (Stock stock : List.of(Stock.FOOD, Stock.MATERIALS)) {
+            source.sendSuccess(() -> Component.translatable("cities.command.trade.price", stock.title(),
+                    TradeManager.amount(s, stock), TradeManager.target(s, stock),
+                    String.format(Locale.ROOT, "%.2f", TradeManager.price(s, stock))), false);
+        }
+        if (!TradeManager.canTrade(s)) {
+            source.sendSuccess(() -> Component.translatable("cities.command.trade.no_market")
+                    .withStyle(ChatFormatting.GRAY), false);
+        }
+        long now = ctx.getSource().getLevel().getGameTime();
+        int shown = 0;
+        for (Caravan caravan : data.caravans()) {
+            boolean outgoing = caravan.from().equals(s.id());
+            if (!outgoing && !caravan.to().equals(s.id())) {
+                continue;
+            }
+            Settlement other = data.byId(outgoing ? caravan.to() : caravan.from());
+            String otherName = other == null ? "?" : other.name();
+            long minutes = Math.max(0, (caravan.arriveTick() - now) / 1200);
+            source.sendSuccess(() -> Component.translatable(outgoing
+                            ? "cities.command.trade.outgoing" : "cities.command.trade.incoming",
+                    caravan.amount(), caravan.stock().displayName(), otherName, caravan.price(), minutes), false);
+            shown++;
+        }
+        if (shown == 0) {
+            source.sendSuccess(() -> Component.translatable("cities.command.trade.none"), false);
+        }
+        return shown;
+    }
+
+    private static int relations(CommandContext<CommandSourceStack> ctx, Settlement s) {
+        CommandSourceStack source = ctx.getSource();
+        source.sendSuccess(() -> Component.translatable("cities.command.relations.header", s.name())
+                .withStyle(ChatFormatting.GOLD), false);
+        int shown = 0;
+        for (Settlement other : data(ctx).all()) {
+            if (other == s || !DiplomacyManager.inRange(s, other)) {
+                continue;
+            }
+            int value = s.relation(other.id());
+            int distance = (int) Math.sqrt(s.center().distSqr(other.center()));
+            source.sendSuccess(() -> Component.translatable("cities.command.relations.entry", other.name(),
+                    Relation.of(value).displayName(), value, distance), false);
+            shown++;
+        }
+        if (shown == 0) {
+            source.sendSuccess(() -> Component.translatable("cities.command.relations.none"), false);
+        }
+        return shown;
     }
 
     private static int donate(CommandContext<CommandSourceStack> ctx) throws CommandSyntaxException {
@@ -329,6 +409,23 @@ public final class CityCommands {
         s.setGuards(s.guards() + 1);
         data(ctx).setDirty();
         ctx.getSource().sendSuccess(() -> Component.translatable("cities.command.guard_hired", s.name()), true);
+        return 1;
+    }
+
+    private static int setRelation(CommandContext<CommandSourceStack> ctx) throws CommandSyntaxException {
+        Settlement s = inside(ctx);
+        Settlement other = named(ctx);
+        int value = IntegerArgumentType.getInteger(ctx, "value");
+        Relation before = DiplomacyManager.relation(s, other);
+        s.setRelation(other.id(), value);
+        other.setRelation(s.id(), value);
+        Relation after = DiplomacyManager.relation(s, other);
+        if (before != after) {
+            DiplomacyManager.announce(ctx.getSource().getLevel(), s, other, after);
+        }
+        data(ctx).setDirty();
+        ctx.getSource().sendSuccess(() -> Component.translatable("cities.command.relation_set", s.name(),
+                other.name(), after.displayName(), value), true);
         return 1;
     }
 

@@ -6,6 +6,8 @@ import com.wusternfuchs.cities.building.BuildingType;
 import com.wusternfuchs.cities.building.ConstructionManager;
 import com.wusternfuchs.cities.building.TownPlanner;
 import com.wusternfuchs.cities.defense.DefenseManager;
+import com.wusternfuchs.cities.diplomacy.DiplomacyManager;
+import com.wusternfuchs.cities.trade.TradeManager;
 import net.minecraft.ChatFormatting;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;
@@ -48,6 +50,7 @@ public final class SettlementManager {
     private static final int STARTING_FOOD = 50;
     private static final int STARTING_MATERIALS = 64;
     private static final int SIEGE_TICK_INTERVAL = 40;
+    private static final int CARAVAN_TICK_INTERVAL = 100;
 
     /** Settlement each online player stood in last time we checked, for enter/leave titles. */
     private static final Map<UUID, UUID> PLAYER_LOCATIONS = new HashMap<>();
@@ -81,6 +84,9 @@ public final class SettlementManager {
                     DefenseManager.tickSiege(level, data, settlement);
                 }
             }
+        }
+        if (time % CARAVAN_TICK_INTERVAL == 0) {
+            TradeManager.resolveArrivals(level, SettlementData.get(level));
         }
         if (time % CitiesConfig.CENSUS_INTERVAL.get() == 0) {
             SettlementData data = SettlementData.get(level);
@@ -183,6 +189,8 @@ public final class SettlementManager {
         DefenseManager.updateGarrison(level, data, s);
         updateTier(level, data, s);
         TownPlanner.plan(level, data, s);
+        DiplomacyManager.drift(level, data, s);
+        TradeManager.plan(level, data, s);
         DefenseManager.maybeStartSiege(level, data, s, false);
         data.setDirty();
     }

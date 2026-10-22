@@ -43,6 +43,11 @@ public enum Stock {
         }
     }
 
+    /** Capitalised name for headings and tables. */
+    public Component title() {
+        return Component.translatable("cities.stock." + name().toLowerCase(Locale.ROOT) + ".title");
+    }
+
     public Component displayName() {
         return Component.translatable("cities.stock." + name().toLowerCase(Locale.ROOT));
     }

@@ -2,6 +2,8 @@ package com.wusternfuchs.cities.defense;
 
 import com.wusternfuchs.cities.CitiesConfig;
 import com.wusternfuchs.cities.building.BuildingType;
+import com.wusternfuchs.cities.diplomacy.DiplomacyManager;
+import com.wusternfuchs.cities.diplomacy.Relation;
 import com.wusternfuchs.cities.entity.CitiesEntities;
 import com.wusternfuchs.cities.entity.Guard;
 import com.wusternfuchs.cities.settlement.Settlement;
@@ -41,6 +43,7 @@ public final class DefenseManager {
     private static final int ALERT_RADIUS = 32;
     private static final int REPUTATION_PER_RAIDER = 3;
     private static final int REPUTATION_HURT_VILLAGER = -2;
+    private static final int MAX_REINFORCEMENTS = 3;
 
     private DefenseManager() {
     }
@@ -128,10 +131,13 @@ public final class DefenseManager {
         }
         long day = SettlementManager.day(level);
         if (!force) {
+            // Hostile neighbours pay bandits to harass the town.
+            int enemies = DiplomacyManager.withRelation(data, s, Relation.HOSTILE).size();
+            double chance = CitiesConfig.SIEGE_CHANCE.get() * s.tier().ordinal() * (1 + enemies);
             if (!CitiesConfig.SIEGES_ENABLED.get() || s.abandoned()
                     || s.tier().ordinal() < SettlementTier.VILLAGE.ordinal() || level.isDay()
                     || day - s.lastSiegeDay() < SIEGE_COOLDOWN_DAYS || !playerInside(level, data, s)
-                    || level.getRandom().nextDouble() >= CitiesConfig.SIEGE_CHANCE.get() * s.tier().ordinal()) {
+                    || level.getRandom().nextDouble() >= chance) {
                 return false;
             }
         }
@@ -176,7 +182,29 @@ public final class DefenseManager {
                         64.0f, 1.0f);
             }
         }
+        callAllies(level, data, s);
         return true;
+    }
+
+    /** Allies with guards and money to spare each send one guard, who stays on in the town afterwards. */
+    private static void callAllies(ServerLevel level, SettlementData data, Settlement s) {
+        int sent = 0;
+        for (Settlement ally : DiplomacyManager.withRelation(data, s, Relation.ALLIED)) {
+            if (sent >= MAX_REINFORCEMENTS || ally.guards() < 2 || ally.wealth() < GUARD_COST) {
+                continue;
+            }
+            if (hireGuard(level, s) != null) {
+                ally.addWealth(-GUARD_COST);
+                s.setGuards(s.guards() + 1);
+                s.record(SettlementManager.day(level), "reinforcements", ally.name());
+                Component message = Component.translatable("cities.siege.reinforcements", ally.name(), s.name())
+                        .withStyle(ChatFormatting.AQUA);
+                for (ServerPlayer player : level.players()) {
+                    player.sendSystemMessage(message);
+                }
+                sent++;
+            }
+        }
     }
 
     /** Keeps raiders marching on the town and decides how the siege ends. */

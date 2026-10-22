@@ -1,5 +1,6 @@
 package com.wusternfuchs.cities.settlement;
 
+import com.wusternfuchs.cities.trade.Caravan;
 import it.unimi.dsi.fastutil.longs.Long2ObjectMap;
 import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap;
 import net.minecraft.core.BlockPos;
@@ -12,9 +13,11 @@ import net.minecraft.world.level.ChunkPos;
 import net.minecraft.world.level.saveddata.SavedData;
 
 import javax.annotation.Nullable;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
@@ -25,6 +28,7 @@ public final class SettlementData extends SavedData {
 
     private final Map<UUID, Settlement> settlements = new LinkedHashMap<>();
     private final Long2ObjectMap<UUID> chunkOwners = new Long2ObjectOpenHashMap<>();
+    private final List<Caravan> caravans = new ArrayList<>();
 
     public static SettlementData get(ServerLevel level) {
         return level.getDataStorage().computeIfAbsent(FACTORY, FILE_NAME);
@@ -86,7 +90,16 @@ public final class SettlementData extends SavedData {
     public void remove(Settlement settlement) {
         releaseTerritory(settlement);
         settlements.remove(settlement.id());
+        caravans.removeIf(c -> c.from().equals(settlement.id()) || c.to().equals(settlement.id()));
+        for (Settlement other : settlements.values()) {
+            other.forgetRelation(settlement.id());
+        }
         setDirty();
+    }
+
+    /** Caravans currently on the road in this dimension. */
+    public List<Caravan> caravans() {
+        return caravans;
     }
 
     /**
@@ -126,6 +139,9 @@ public final class SettlementData extends SavedData {
         ListTag list = new ListTag();
         settlements.values().forEach(s -> list.add(s.save()));
         tag.put("settlements", list);
+        ListTag roads = new ListTag();
+        caravans.forEach(c -> roads.add(c.save()));
+        tag.put("caravans", roads);
         return tag;
     }
 
@@ -137,6 +153,13 @@ public final class SettlementData extends SavedData {
             data.settlements.put(s.id(), s);
             for (long chunk : s.chunks()) {
                 data.chunkOwners.putIfAbsent(chunk, s.id());
+            }
+        }
+        ListTag roads = tag.getList("caravans", Tag.TAG_COMPOUND);
+        for (int i = 0; i < roads.size(); i++) {
+            Caravan caravan = Caravan.load(roads.getCompound(i));
+            if (caravan != null) {
+                data.caravans.add(caravan);
             }
         }
         return data;

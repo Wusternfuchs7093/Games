@@ -3,6 +3,7 @@ package com.wusternfuchs.cities;
 import com.wusternfuchs.cities.command.CityCommands;
 import com.wusternfuchs.cities.defense.DefenseManager;
 import com.wusternfuchs.cities.settlement.SettlementManager;
+import com.wusternfuchs.cities.trade.VillagerTrading;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.npc.AbstractVillager;
@@ -13,6 +14,7 @@ import net.neoforged.neoforge.event.RegisterCommandsEvent;
 import net.neoforged.neoforge.event.entity.living.LivingDamageEvent;
 import net.neoforged.neoforge.event.entity.living.LivingDeathEvent;
 import net.neoforged.neoforge.event.entity.player.PlayerEvent;
+import net.neoforged.neoforge.event.entity.player.PlayerInteractEvent;
 import net.neoforged.neoforge.event.tick.LevelTickEvent;
 import net.neoforged.neoforge.event.tick.PlayerTickEvent;
 
@@ -57,6 +59,11 @@ public final class GameEvents {
         if (event.getEntity() instanceof AbstractVillager villager && villager.level() instanceof ServerLevel level) {
             DefenseManager.onVillagerAttacked(level, villager, event.getSource().getEntity());
         }
+    }
+
+    @SubscribeEvent
+    public static void onEntityInteract(PlayerInteractEvent.EntityInteract event) {
+        VillagerTrading.onInteract(event);
     }
 
     @SubscribeEvent

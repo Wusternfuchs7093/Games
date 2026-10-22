@@ -61,6 +61,7 @@ public final class Settlement {
 
     private final LongSet chunks = new LongOpenHashSet();
     private final Object2IntMap<UUID> reputation = new Object2IntOpenHashMap<>();
+    private final Object2IntMap<UUID> relations = new Object2IntOpenHashMap<>();
     private final List<HistoryEntry> history = new ArrayList<>();
     private final List<Building> buildings = new ArrayList<>();
     @Nullable
@@ -307,6 +308,19 @@ public final class Settlement {
         reputation.put(player, Mth.clamp(reputation(player) + delta, MIN_REPUTATION, MAX_REPUTATION));
     }
 
+    /** Diplomatic standing towards another settlement, -100..100. */
+    public int relation(UUID other) {
+        return relations.getOrDefault(other, 0);
+    }
+
+    public void setRelation(UUID other, int value) {
+        relations.put(other, Mth.clamp(value, -100, 100));
+    }
+
+    public void forgetRelation(UUID other) {
+        relations.removeInt(other);
+    }
+
     public List<HistoryEntry> history() {
         return Collections.unmodifiableList(history);
     }
@@ -352,6 +366,10 @@ public final class Settlement {
         CompoundTag rep = new CompoundTag();
         reputation.forEach((player, value) -> rep.putInt(player.toString(), value));
         tag.put("reputation", rep);
+
+        CompoundTag rel = new CompoundTag();
+        relations.forEach((other, value) -> rel.putInt(other.toString(), value));
+        tag.put("relations", rel);
 
         ListTag log = new ListTag();
         history.forEach(entry -> log.add(entry.save()));
@@ -406,6 +424,15 @@ public final class Settlement {
                 s.reputation.put(UUID.fromString(key), rep.getInt(key));
             } catch (IllegalArgumentException ignored) {
                 // Corrupted entry: skip it rather than losing the whole settlement.
+            }
+        }
+
+        CompoundTag rel = tag.getCompound("relations");
+        for (String key : rel.getAllKeys()) {
+            try {
+                s.relations.put(UUID.fromString(key), rel.getInt(key));
+            } catch (IllegalArgumentException ignored) {
+                // Skip a corrupted entry.
             }
         }
 
