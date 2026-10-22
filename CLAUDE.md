@@ -110,6 +110,9 @@ Extras:
 - Explained "wealth" (treasury, 9 per emerald; sources/sinks; tier thresholds 256/1024/4096/16384/65536).
   If the user finds high tiers' wealth requirements too steep in play, lower them in `SettlementTier`.
 
+- Explained research speed (1 + 2/scholar + 4/library + 2 town hall, ×1.5 Printing, +25% borderland). Offered:
+  donated books/paper could add research points (today they go to wealth) — waiting for an answer.
+
 Next:
 - In-game testing and bug fixing with the user (top priority).
 - Ideas not built yet (from MECHANICS.md): JourneyMap/Xaero markers, families/inheritance, guilds, banks/loans,
