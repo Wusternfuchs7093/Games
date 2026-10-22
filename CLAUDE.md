@@ -79,6 +79,14 @@ Done stages (all compile in CI, none tested in game):
 13 datapack buildings/names, multiplayer options (protectBuildings, maxTownsPerPlayer, allowPlayerWars),
 API events, /city admin stats. **All 13 planned stages are done.**
 
+Extras:
+- `minecraft-cities-mod/MODCARD.md` — mod description for Modrinth/CurseForge (Russian). A styled mod card page was also
+  published as a private claude.ai artifact: https://claude.ai/artifact/7bUvKt9SW3AREJJ2d1cT7m (source was in the session
+  scratchpad, not in the repo; to change it, read the artifact and republish to that URL).
+- The user plays with **TLauncher**. Install steps (NeoForge 1.21.1 version → jar from the Actions artifact
+  `cities-mod-jar` → `%appdata%\.minecraft\mods`) are in README "Установка через TLauncher". There is no GitHub
+  release yet; the jar comes from CI artifacts (need a GitHub login, expire after 90 days).
+
 Next:
 - In-game testing and bug fixing with the user (top priority).
 - Ideas not built yet (from MECHANICS.md): JourneyMap/Xaero markers, families/inheritance, guilds, banks/loans,

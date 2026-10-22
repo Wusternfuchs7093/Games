@@ -313,6 +313,18 @@
 
 Настройки лежат в `world/serverconfig/cities-server.toml`: интервалы, радиусы, множитель населения, шанс иммиграции, `ignorePotential`, скорость стройки `buildIntervalTicks`, бесплатная стройка `freeConstruction`, стража `guardsEnabled`, набеги `siegesEnabled`, войны `warsEnabled`, бедствия `disasters.enabled` и их шансы, продолжительность жизни `lifespanDays`, имена жителей `nameVillagers`, шанс набегов `siegeChancePerTier`, торговля `trade.enabled` и шанс грабежа `robberyChance`, период выборов `electionIntervalDays`, основание городов игроками `allowPlayerFounding`.
 
+## Установка через TLauncher
+
+1. **Версия игры.** В TLauncher выберите в списке версий **NeoForge 1.21.1** и установите её. Если такой версии нет, скачайте установщик NeoForge 21.1.x с https://neoforged.net, запустите его, выберите **Install client** и укажите папку игры TLauncher (обычно `%appdata%\.minecraft`). После этого версия NeoForge появится в списке TLauncher.
+2. Запустите эту версию один раз и закройте игру: так появится папка `mods`.
+3. **Файл мода.** На GitHub: вкладка **Actions** → последний запуск **Build mod** → внизу **Artifacts** → `cities-mod-jar` (нужно войти в GitHub). Распакуйте архив: внутри `cities-0.1.0.jar`.
+4. Положите jar в `%appdata%\.minecraft\mods`. Если в TLauncher включены отдельные папки для версий, то в папку `mods` этой версии: её открывает кнопка с папкой в лаунчере.
+5. Запустите NeoForge 1.21.1. В меню **Mods** должен быть **Cities**. Найдите деревню и нажмите **K**.
+
+Если игра падает, пришлите файл из папки `crash-reports` или `logs/latest.log`.
+
+Карточка мода для Modrinth или CurseForge лежит в [MODCARD.md](MODCARD.md).
+
 ## Сборка и запуск
 
 Нужна Java 21.
