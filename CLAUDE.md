@@ -113,6 +113,9 @@ Extras:
 - Explained research speed (1 + 2/scholar + 4/library + 2 town hall, ×1.5 Printing, +25% borderland). Offered:
   donated books/paper could add research points (today they go to wealth) — waiting for an answer.
 
+- Explained happiness factors (see `settlement/Mood`). The user is learning the systems one by one; a short
+  "how each system works" player guide in README could save repeated questions.
+
 Next:
 - In-game testing and bug fixing with the user (top priority).
 - Ideas not built yet (from MECHANICS.md): JourneyMap/Xaero markers, families/inheritance, guilds, banks/loans,
