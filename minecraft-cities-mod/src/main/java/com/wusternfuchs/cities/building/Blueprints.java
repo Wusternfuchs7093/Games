@@ -457,7 +457,8 @@ public final class Blueprints {
         c.fill(w / 2, 1, 3, w / 2, 1, d - 3, Blocks.BLUE_CARPET.defaultBlockState());
         c.set(w / 2, 1, 2, Blocks.BREWING_STAND.defaultBlockState());
         c.set(w / 2, 2, 1, p.accent());
-        dome(c, w / 2, d / 2, base + 1, 3, p.accent(), false);
+        drawProfile(c, w / 2, d / 2, base + 1, List.of(3, 3), p.walls());
+        dome(c, w / 2, d / 2, base + 3, 3, p.accent(), false);
         // Minaret on the front left corner.
         int mx0 = 0;
         int mz0 = d - 3;
@@ -872,7 +873,10 @@ public final class Blueprints {
     /** What rises above a town hall: a clock tower, a dome, an onion, mud towers, a pagoda tier or a roof comb. */
     private static void crown(Canvas c, Palette p, int cx, int cz, int roofBase, int top) {
         switch (p.style()) {
-            case DESERT -> dome(c, cx, cz, roofBase + 1, 2, p.accent(), false);
+            case DESERT -> {
+                drawProfile(c, cx, cz, roofBase + 1, List.of(3, 3), p.walls());
+                dome(c, cx, cz, roofBase + 3, 3, p.accent(), false);
+            }
             case TAIGA -> {
                 for (int y = roofBase; y <= top + 1; y++) {
                     int yy = y;

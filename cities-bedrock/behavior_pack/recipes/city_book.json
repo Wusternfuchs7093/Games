@@ -1,0 +1,22 @@
+{
+  "format_version": "1.20.10",
+  "minecraft:recipe_shapeless": {
+    "description": {
+      "identifier": "cities:city_book"
+    },
+    "tags": [
+      "crafting_table"
+    ],
+    "ingredients": [
+      {
+        "item": "minecraft:book"
+      },
+      {
+        "item": "minecraft:emerald"
+      }
+    ],
+    "result": {
+      "item": "cities:city_book"
+    }
+  }
+}

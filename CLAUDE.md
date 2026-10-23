@@ -142,9 +142,21 @@ Extras:
 - After stage 14 the user asked how to update the mod: same as install — newest green run → Artifacts →
   `cities-mod-jar`, delete the old `cities-*.jar` from mods, put the new one in. Advised a new test world.
 
-- User asked about a mobile (Bedrock) add-on. Explained: NeoForge mod cannot run on Bedrock; an add-on would be a
-  separate rewrite (behavior+resource pack, Script API JS, forms UI), simplified. Offered to start a
-  `cities-bedrock/` .mcaddon with core features first — waiting for their answer.
+- **Bedrock add-on** (user: "начинай", same repo, folder `cities-bedrock/`): separate rewrite in Script API JS.
+  Stage 1 done = core: village detection (3+ villagers, bell), culture from village blocks, census (villagers,
+  food/materials/wealth, happiness, immigration), tiers, eras by research points, construction with terraforming,
+  reconstruction per era, job board (deliver), donations, City Book item (forms UI menu + testing menu for
+  single player / tag `cities_admin`), titles. Next Bedrock stages: guards/raids, trade, government, residents,
+  disasters, crafts.
+  - `behavior_pack/scripts`: `palette.js` + `architecture.js` (pure JS port of the Java generator, testable in
+    Node), `blocks.js` (neutral names/states → Bedrock permutations with fallback ids and state spellings),
+    `terrain.js`, `construction.js`, `planner.js`, `census.js`, `quests.js`, `detect.js`, `ui.js`, `store.js`
+    (JSON in world dynamic properties), `settlement.js`, `i18n.js` (RawMessage `t()`), `main.js`.
+  - Uses `@minecraft/server` 1.11.0 and `@minecraft/server-ui` 1.2.0 (stable), min engine 1.21.0.
+  - Lang in `resource_pack/texts/{en_US,ru_RU}.lang` (no `\n` in values!). CI: `.github/workflows/bedrock.yml`
+    → artifact `cities-bedrock-mcaddon`.
+  - Testing here: Node with a fake `@minecraft/server` (loader in the session scratchpad `sim/`, not in repo)
+    ran found → census → build loop; Node renderer drew blueprints to PNG. Nothing tested in real Bedrock yet.
 
 Next:
 - In-game testing and bug fixing with the user (top priority).

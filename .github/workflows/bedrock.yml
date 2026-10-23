@@ -1,0 +1,30 @@
+name: Build Bedrock add-on
+
+on:
+  push:
+    paths:
+      - "cities-bedrock/**"
+      - ".github/workflows/bedrock.yml"
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Check scripts
+        run: for f in cities-bedrock/behavior_pack/scripts/*.js; do node --check "$f"; done
+      - name: Package
+        run: |
+          cd cities-bedrock
+          mkdir -p dist
+          (cd behavior_pack && zip -qr ../dist/cities_bp.mcpack .)
+          (cd resource_pack && zip -qr ../dist/cities_rp.mcpack .)
+          (cd dist && zip -q cities.mcaddon cities_bp.mcpack cities_rp.mcpack)
+      - uses: actions/upload-artifact@v4
+        with:
+          name: cities-bedrock-mcaddon
+          path: cities-bedrock/dist/cities.mcaddon
