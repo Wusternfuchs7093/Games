@@ -158,6 +158,9 @@ Extras:
   - Testing here: Node with a fake `@minecraft/server` (loader in the session scratchpad `sim/`, not in repo)
     ran found → census → build loop; Node renderer drew blueprints to PNG. Nothing tested in real Bedrock yet.
 
+- User asked how to import the .mcaddon on the phone: explained Android (open file → Minecraft; or copy to
+  games/com.mojang) and iPhone (Files → share → Minecraft), then enable the behavior pack in world settings.
+
 Next:
 - In-game testing and bug fixing with the user (top priority).
 - Ideas not built yet (from MECHANICS.md): JourneyMap/Xaero markers, families/inheritance, guilds, banks/loans,
