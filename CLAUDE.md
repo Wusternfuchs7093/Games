@@ -168,6 +168,10 @@ Extras:
 - User asked if Bedrock has modpacks: explained add-ons (no Forge-style packs), Marketplace, MCPEDL, CurseForge
   Bedrock section, stacking several add-ons in one world. Offered to check our add-on's compatibility with theirs.
 
+- User asked about zombie-apocalypse maps/add-ons for Bedrock: pointed to MCPEDL / CurseForge Bedrock /
+  Marketplace search terms. Offered to build our own "apocalypse" mode on top of the Cities generator (ruined
+  towns with loot chests, night hordes, barricades, survivor base) — waiting for an answer.
+
 Next:
 - In-game testing and bug fixing with the user (top priority).
 - Ideas not built yet (from MECHANICS.md): JourneyMap/Xaero markers, families/inheritance, guilds, banks/loans,
