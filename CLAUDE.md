@@ -161,7 +161,9 @@ Extras:
 - User asked how to import the .mcaddon on the phone: explained Android (open file → Minecraft; or copy to
   games/com.mojang) and iPhone (Files → share → Minecraft), then enable the behavior pack in world settings.
   Minecraft was missing from the share sheet → sent Cities_BP.zip / Cities_RP.zip (pack folders) for manual install
-  into games/com.mojang/behavior_packs and resource_packs. Device type (iPhone/Android) not confirmed yet.
+  into games/com.mojang/behavior_packs and resource_packs. Device: **Android, Google Play licence**. Folder creation failed (Android/data is locked on Android 11+).
+  Explained: Minecraft registers only "open" (VIEW) for .mcaddon, not "share" (SEND); open the file from a file
+  manager (ZArchiver / Cx File Explorer), check the name kept the .mcaddon extension (not .zip).
 
 Next:
 - In-game testing and bug fixing with the user (top priority).
