@@ -93,7 +93,7 @@ Done stages (all compile in CI, none tested in game):
 11 cultures/highways/ruins/old towns · 12 city screen (K, /city gui), /city borders, /city chronicle ·
 13 datapack buildings/names, multiplayer options (protectBuildings, maxTownsPerPlayer, allowPlayerWars),
 API events, /city admin stats. **All 13 planned stages are done.**
-14 (user's request after reading the mod): cultures as countries with distinct architecture per era (German,
+14 (CI green; user's request after reading the mod): cultures as countries with distinct architecture per era (German,
 Arab, Rus, Norse, Sahel, British, Japanese, Maya), eras INDUSTRIAL + MODERN with 6 techs, reconstruction of
 outdated buildings, professions scholar/builder/artisan with workstations, clergy class, temples, culture crafts
 + craft houses, terraforming builders, territory covers the whole found village (`coreRadius`), job board screen
