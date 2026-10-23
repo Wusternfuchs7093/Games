@@ -97,7 +97,7 @@ API events, /city admin stats. **All 13 planned stages are done.**
 Arab, Rus, Norse, Sahel, British, Japanese, Maya), eras INDUSTRIAL + MODERN with 6 techs, reconstruction of
 outdated buildings, professions scholar/builder/artisan with workstations, clergy class, temples, culture crafts
 + craft houses, terraforming builders, territory covers the whole found village (`coreRadius`), job board screen
-+ block, hotkeys J/G. Design calls made by me: scholars = science (3 pts), librarians 1 pt, clerics = healing +
++ block, hotkeys J/G, `/city admin era <era>` for testing. Design calls made by me: scholars = science (3 pts), librarians 1 pt, clerics = healing +
 happiness; CITY tier now also needs a TEMPLE.
 
 Extras:
