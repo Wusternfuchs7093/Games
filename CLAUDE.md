@@ -165,6 +165,9 @@ Extras:
   Explained: Minecraft registers only "open" (VIEW) for .mcaddon, not "share" (SEND); open the file from a file
   manager (ZArchiver / Cx File Explorer), check the name kept the .mcaddon extension (not .zip).
 
+- User asked if Bedrock has modpacks: explained add-ons (no Forge-style packs), Marketplace, MCPEDL, CurseForge
+  Bedrock section, stacking several add-ons in one world. Offered to check our add-on's compatibility with theirs.
+
 Next:
 - In-game testing and bug fixing with the user (top priority).
 - Ideas not built yet (from MECHANICS.md): JourneyMap/Xaero markers, families/inheritance, guilds, banks/loans,
