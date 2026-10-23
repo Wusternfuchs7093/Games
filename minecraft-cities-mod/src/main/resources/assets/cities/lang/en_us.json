@@ -495,5 +495,7 @@
   "cities.gui.board.yours": "Yours",
   "cities.gui.board.taken": "Taken",
   "cities.gui.board.hint_wish": "♥ Wishes: hold the item and Shift + right-click the villager.",
-  "cities.gui.board.hint_keys": "Keys: J — this board, G — donate what you hold (Shift + G — all of it), K — city screen."
+  "cities.gui.board.hint_keys": "Keys: J — this board, G — donate what you hold (Shift + G — all of it), K — city screen.",
+  "cities.command.unknown_era": "Unknown era.",
+  "cities.command.era_set": "%s has entered the %s."
 }

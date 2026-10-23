@@ -33,6 +33,7 @@ import com.wusternfuchs.cities.governance.GovernanceManager;
 import com.wusternfuchs.cities.governance.Law;
 import com.wusternfuchs.cities.governance.TaxRate;
 import com.wusternfuchs.cities.research.ResearchManager;
+import com.wusternfuchs.cities.research.Era;
 import com.wusternfuchs.cities.research.Tech;
 import com.wusternfuchs.cities.CitiesConfig;
 import com.wusternfuchs.cities.trade.Caravan;
@@ -149,6 +150,9 @@ public final class CityCommands {
             SharedSuggestionProvider.suggest(Arrays.stream(DisasterManager.Kind.values())
                     .map(kind -> kind.name().toLowerCase(Locale.ROOT)), builder);
 
+    private static final SuggestionProvider<CommandSourceStack> ERA_IDS = (ctx, builder) ->
+            SharedSuggestionProvider.suggest(Arrays.stream(Era.values()).map(Era::id), builder);
+
     private static final SuggestionProvider<CommandSourceStack> BUILDING_IDS = (ctx, builder) ->
             SharedSuggestionProvider.suggest(Arrays.stream(BuildingType.values()).map(BuildingType::id), builder);
 
@@ -170,6 +174,10 @@ public final class CityCommands {
                                 .suggests(TIER_IDS)
                                 .executes(CityCommands::setLevel)))
                 .then(Commands.literal("census").executes(CityCommands::census))
+                .then(Commands.literal("era")
+                        .then(Commands.argument("era", StringArgumentType.word())
+                                .suggests(ERA_IDS)
+                                .executes(CityCommands::setEra)))
                 .then(Commands.literal("build")
                         .then(Commands.argument("building", StringArgumentType.word())
                                 .suggests(BUILDING_IDS)
@@ -1058,6 +1066,26 @@ public final class CityCommands {
     }
 
     /** Gives the town the stack in hand, or with {@code all} every stack of that item the player carries. */
+    /** Testing aid: grants every technology of the earlier eras so the town enters {@code era} at once. */
+    private static int setEra(CommandContext<CommandSourceStack> ctx) throws CommandSyntaxException {
+        Settlement s = inside(ctx);
+        Era era = Era.byId(StringArgumentType.getString(ctx, "era"));
+        if (era == null) {
+            throw failure("cities.command.unknown_era");
+        }
+        s.techs().removeIf(tech -> tech.era().ordinal() >= era.ordinal());
+        for (Tech tech : Tech.values()) {
+            if (tech.era().ordinal() < era.ordinal()) {
+                s.techs().add(tech);
+            }
+        }
+        s.setResearching(null);
+        data(ctx).setDirty();
+        ctx.getSource().sendSuccess(() -> Component.translatable("cities.command.era_set", s.name(),
+                s.era().displayName()), true);
+        return 1;
+    }
+
     private static int donate(CommandContext<CommandSourceStack> ctx, boolean all) throws CommandSyntaxException {
         ServerPlayer player = ctx.getSource().getPlayerOrException();
         Settlement s = inside(ctx);

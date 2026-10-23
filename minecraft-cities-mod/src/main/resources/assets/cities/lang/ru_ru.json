@@ -495,5 +495,7 @@
   "cities.gui.board.yours": "Ваш",
   "cities.gui.board.taken": "Занят",
   "cities.gui.board.hint_wish": "♥ Просьбы: возьмите предмет в руку и Shift + ПКМ по жителю.",
-  "cities.gui.board.hint_keys": "Клавиши: J — эта доска, G — пожертвовать предмет в руке (Shift + G — все такие), K — экран города."
+  "cities.gui.board.hint_keys": "Клавиши: J — эта доска, G — пожертвовать предмет в руке (Shift + G — все такие), K — экран города.",
+  "cities.command.unknown_era": "Неизвестная эпоха.",
+  "cities.command.era_set": "%s перешёл в эпоху: %s."
 }
