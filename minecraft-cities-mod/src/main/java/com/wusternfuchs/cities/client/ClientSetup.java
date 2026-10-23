@@ -21,5 +21,7 @@ public final class ClientSetup {
     @SubscribeEvent
     public static void registerKeys(RegisterKeyMappingsEvent event) {
         event.register(ClientEvents.OPEN_CITY);
+        event.register(ClientEvents.OPEN_BOARD);
+        event.register(ClientEvents.DONATE);
     }
 }

@@ -4,6 +4,8 @@ import com.wusternfuchs.cities.CitiesConfig;
 import com.wusternfuchs.cities.api.CitiesApi;
 import com.wusternfuchs.cities.api.SettlementEvent;
 import com.wusternfuchs.cities.building.ConstructionProject.Placement;
+import com.wusternfuchs.cities.profession.CitiesProfessions;
+import com.wusternfuchs.cities.settlement.ArchitectureStyle;
 import com.wusternfuchs.cities.settlement.Settlement;
 import com.wusternfuchs.cities.settlement.SettlementData;
 import com.wusternfuchs.cities.settlement.SettlementManager;
@@ -26,17 +28,21 @@ import net.minecraft.world.entity.ai.memory.WalkTarget;
 import net.minecraft.world.entity.npc.Villager;
 import net.minecraft.world.entity.npc.VillagerProfession;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.level.block.BasePressurePlateBlock;
 import net.minecraft.world.level.block.BedBlock;
 import net.minecraft.world.level.block.BellBlock;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.BushBlock;
+import net.minecraft.world.level.block.CampfireBlock;
 import net.minecraft.world.level.block.CarpetBlock;
 import net.minecraft.world.level.block.DoorBlock;
 import net.minecraft.world.level.block.LadderBlock;
 import net.minecraft.world.level.block.LanternBlock;
+import net.minecraft.world.level.block.LightningRodBlock;
 import net.minecraft.world.level.block.SoundType;
 import net.minecraft.world.level.block.TorchBlock;
+import net.minecraft.world.level.block.TrapDoorBlock;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.levelgen.Heightmap;
@@ -56,6 +62,13 @@ public final class ConstructionManager {
     private static final int WORK_DISTANCE = 12;
     private static final int TELEPORT_AFTER_TICKS = 1200;
     private static final int MAX_ROAD_LENGTH = 160;
+    /** Deepest hollow filled under a building or its surroundings. */
+    private static final int MAX_FOUNDATION = 12;
+    /** Width of the levelled strip around a building. */
+    private static final int LEVEL_MARGIN = 2;
+    private static final int EARTHWORK_BATCH = 6;
+    /** Builders beyond this many no longer speed construction up. */
+    public static final int MAX_BUILDER_BONUS = 3;
 
     private ConstructionManager() {
     }
@@ -116,6 +129,9 @@ public final class ConstructionManager {
         }
         if (s.hasTech(Tech.CARPENTRY) && project.placed() % 4 == 3) {
             cost = 0; // every fourth block comes from leftovers
+        }
+        if (s.hasTech(Tech.CONCRETE) && project.placed() % 2 == 1) {
+            cost = 0; // poured concrete needs half the materials
         }
         boolean free = CitiesConfig.FREE_CONSTRUCTION.get();
         if (!free && s.materials() < cost) {
@@ -200,12 +216,12 @@ public final class ConstructionManager {
             return v;
         }
         BlockPos site = project.building().bounds(bp).getCenter();
-        int radius = (s.tier().radiusChunks() + 1) * 16;
+        int radius = (s.radiusChunks() + 1) * 16;
         List<Villager> candidates = level.getEntitiesOfClass(Villager.class,
                 new AABB(s.center()).inflate(radius, 48, radius),
                 v -> v.isAlive() && !v.isBaby() && data.at(v.blockPosition()) == s);
         Villager chosen = candidates.stream()
-                .min(Comparator.comparingInt((Villager v) -> isIdle(v) ? 0 : 1)
+                .min(Comparator.comparingInt(ConstructionManager::builderRank)
                         .thenComparingDouble(v -> v.distanceToSqr(site.getX(), site.getY(), site.getZ())))
                 .orElse(null);
         project.setBuilder(chosen == null ? null : chosen.getUUID());
@@ -216,9 +232,13 @@ public final class ConstructionManager {
         return chosen;
     }
 
-    private static boolean isIdle(Villager villager) {
+    /** Builders by trade first, then villagers without work, then anybody. */
+    private static int builderRank(Villager villager) {
         VillagerProfession profession = villager.getVillagerData().getProfession();
-        return profession == VillagerProfession.NONE || profession == VillagerProfession.NITWIT;
+        if (CitiesProfessions.is(profession, CitiesProfessions.BUILDER)) {
+            return 0;
+        }
+        return profession == VillagerProfession.NONE || profession == VillagerProfession.NITWIT ? 1 : 2;
     }
 
     private static void walkTo(Villager villager, BlockPos target) {
@@ -245,48 +265,95 @@ public final class ConstructionManager {
     // ------------------------------------------------------------------ planning the blocks
 
     /**
-     * Lists every block change in build order: clear the site top-down, fill the foundation, raise the structure
-     * bottom-up, then add doors, beds, lights and crops, and finally lay a road to the center.
-     * The list is recomputed from the world after a reload; blocks already in place are skipped.
+     * Lists every block change in build order: level the site (cut trees and hills, fill hollows, smooth a strip of
+     * ground around it) top-down, lay the foundation, raise the structure bottom-up, then add doors, beds, lights
+     * and crops, and finally lay a road to the center. The list is recomputed from the world after a reload;
+     * blocks already in place are skipped and parts of the building already standing are never torn down.
      */
     static List<List<Placement>> planSteps(ServerLevel level, SettlementData data, Settlement s, Building building,
                                            Blueprint bp) {
-        Palette palette = Palette.of(s.style(), building.stone());
+        Palette palette = Palette.of(s.style(), building.era(), building.stone());
         if (building.type() == BuildingType.WALL) {
             return planWall(level, s, building, palette);
         }
         if (building.type() == BuildingType.HIGHWAY) {
             return Highways.plan(level, s, building, palette);
         }
-        List<List<Placement>> clearing = new ArrayList<>();
+        List<Placement> clearing = new ArrayList<>();
+        List<Placement> filling = new ArrayList<>();
         List<List<Placement>> foundation = new ArrayList<>();
         List<List<Placement>> structure = new ArrayList<>();
         List<List<Placement>> details = new ArrayList<>();
         BlockState air = Blocks.AIR.defaultBlockState();
+        boolean sandy = s.style() == ArchitectureStyle.DESERT;
+        BlockState surface = sandy ? Blocks.SAND.defaultBlockState() : Blocks.GRASS_BLOCK.defaultBlockState();
+        BlockState soil = sandy ? Blocks.SANDSTONE.defaultBlockState() : Blocks.DIRT.defaultBlockState();
+        int floorY = building.origin().getY();
 
+        // The building's own columns.
         for (int x = 0; x < bp.width(); x++) {
             for (int z = 0; z < bp.depth(); z++) {
                 BlockPos floor = building.toWorld(new BlockPos(x, 0, z));
-                int top = level.getHeight(Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, floor.getX(), floor.getZ()) - 1;
-                for (int y = top + 1; y < floor.getY(); y++) {
-                    foundation.add(List.of(new Placement(new BlockPos(floor.getX(), y, floor.getZ()), palette.foundation(), true)));
+                if (!level.isLoaded(floor)) {
+                    continue;
                 }
-                // Terrain sticking out above the blueprint's own volume.
-                for (int y = top; y >= floor.getY() + bp.height(); y--) {
-                    clearing.add(List.of(new Placement(new BlockPos(floor.getX(), y, floor.getZ()), air, false)));
+                int top = level.getHeight(Heightmap.Types.WORLD_SURFACE, floor.getX(), floor.getZ()) - 1;
+                for (int y = top; y > floorY; y--) {
+                    int local = y - floorY;
+                    if (local < bp.height() && !bp.get(x, local, z).isAir()) {
+                        continue; // the structure replaces whatever is there
+                    }
+                    BlockPos pos = new BlockPos(floor.getX(), y, floor.getZ());
+                    if (!level.getBlockState(pos).isAir()) {
+                        clearing.add(new Placement(pos, air, false));
+                    }
+                }
+                boolean ground = bp.get(x, 0, z).isAir();
+                if (ground && !isSolidGround(level.getBlockState(floor))) {
+                    filling.add(new Placement(floor, surface, false));
+                }
+                for (int y = floorY - 1; y > floorY - MAX_FOUNDATION; y--) {
+                    BlockPos pos = new BlockPos(floor.getX(), y, floor.getZ());
+                    if (isSolidGround(level.getBlockState(pos))) {
+                        break;
+                    }
+                    foundation.add(List.of(new Placement(pos, ground ? soil : palette.foundation(), !ground)));
                 }
             }
         }
 
-        for (int y = bp.height() - 1; y >= 0; y--) {
-            for (int z = 0; z < bp.depth(); z++) {
-                for (int x = 0; x < bp.width(); x++) {
-                    if (bp.get(x, y, z).isAir()) {
-                        clearing.add(List.of(new Placement(building.toWorld(new BlockPos(x, y, z)), air, false)));
+        // A strip of levelled ground around it, blending into the land.
+        BoundingBox box = building.bounds(bp);
+        for (int x = box.minX() - LEVEL_MARGIN; x <= box.maxX() + LEVEL_MARGIN; x++) {
+            for (int z = box.minZ() - LEVEL_MARGIN; z <= box.maxZ() + LEVEL_MARGIN; z++) {
+                int distance = Math.max(Math.max(box.minX() - x, x - box.maxX()), Math.max(box.minZ() - z, z - box.maxZ()));
+                if (distance <= 0 || !level.isLoaded(new BlockPos(x, floorY, z))) {
+                    continue;
+                }
+                int natural = TownPlanner.groundLevel(level, x, z);
+                int target = distance == 1 ? floorY : (floorY + natural) / 2;
+                int top = level.getHeight(Heightmap.Types.WORLD_SURFACE, x, z) - 1;
+                for (int y = top; y > target; y--) {
+                    BlockPos pos = new BlockPos(x, y, z);
+                    BlockState state = level.getBlockState(pos);
+                    if (!state.isAir() && (y > natural || TownPlanner.isBuildableGround(state) || TownPlanner.isVegetation(state))) {
+                        clearing.add(new Placement(pos, air, false));
                     }
+                }
+                for (int y = target; y > target - MAX_FOUNDATION; y--) {
+                    BlockPos pos = new BlockPos(x, y, z);
+                    if (isSolidGround(level.getBlockState(pos))) {
+                        break;
+                    }
+                    filling.add(new Placement(pos, y == target ? surface : soil, false));
                 }
             }
         }
+
+        // Clear from the top down so nothing is left hanging; fill from the bottom up.
+        clearing.sort(Comparator.comparingInt((Placement placement) -> placement.pos().getY()).reversed());
+        filling.sort(Comparator.comparingInt(placement -> placement.pos().getY()));
+        foundation.sort(Comparator.comparingInt(group -> group.get(0).pos().getY()));
 
         for (int y = 0; y < bp.height(); y++) {
             for (int z = 0; z < bp.depth(); z++) {
@@ -308,15 +375,31 @@ public final class ConstructionManager {
             }
         }
 
-        List<List<Placement>> steps = new ArrayList<>(clearing.size() + foundation.size() + structure.size() + details.size());
-        steps.addAll(clearing);
+        List<List<Placement>> steps = new ArrayList<>();
+        steps.addAll(batches(clearing));
         steps.addAll(foundation);
+        steps.addAll(batches(filling));
         steps.addAll(structure);
         steps.addAll(details);
         if (building.type().hasRoad()) {
             steps.addAll(planRoad(level, data, s, building, bp, palette));
         }
         return steps;
+    }
+
+    /** Earthworks are quick: several blocks of digging or filling per step. */
+    private static List<List<Placement>> batches(List<Placement> placements) {
+        List<List<Placement>> result = new ArrayList<>();
+        for (int i = 0; i < placements.size(); i += EARTHWORK_BATCH) {
+            result.add(List.copyOf(placements.subList(i, Math.min(placements.size(), i + EARTHWORK_BATCH))));
+        }
+        return result;
+    }
+
+    /** Solid enough to stand on and build on: not air, water, plants or snow. */
+    private static boolean isSolidGround(BlockState state) {
+        return !state.isAir() && state.getFluidState().isEmpty() && !state.canBeReplaced()
+                && !TownPlanner.isVegetation(state);
     }
 
     /**
@@ -369,7 +452,9 @@ public final class ConstructionManager {
         Block block = state.getBlock();
         return block instanceof DoorBlock || block instanceof BedBlock || block instanceof TorchBlock
                 || block instanceof LanternBlock || block instanceof LadderBlock || block instanceof BellBlock
-                || block instanceof BushBlock || block instanceof CarpetBlock;
+                || block instanceof BushBlock || block instanceof CarpetBlock || block instanceof TrapDoorBlock
+                || block instanceof BasePressurePlateBlock || block instanceof CampfireBlock
+                || block instanceof LightningRodBlock;
     }
 
     /** An L-shaped road from the door to the center that stops when it meets an existing road. */

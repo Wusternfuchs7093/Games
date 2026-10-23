@@ -1,5 +1,6 @@
 package com.wusternfuchs.cities.people;
 
+import com.wusternfuchs.cities.profession.CitiesProfessions;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.entity.npc.Villager;
 import net.minecraft.world.entity.npc.VillagerProfession;
@@ -11,7 +12,8 @@ public enum SocialClass {
     PEASANT,
     ARTISAN,
     SCHOLAR,
-    ELITE;
+    ELITE,
+    CLERGY;
 
     /** Villagers at this trade level or higher count as the town's elite. */
     public static final int ELITE_LEVEL = 4;
@@ -21,9 +23,12 @@ public enum SocialClass {
             return ELITE;
         }
         VillagerProfession profession = villager.getVillagerData().getProfession();
-        if (profession == VillagerProfession.LIBRARIAN || profession == VillagerProfession.CLERIC
+        if (CitiesProfessions.is(profession, CitiesProfessions.SCHOLAR) || profession == VillagerProfession.LIBRARIAN
                 || profession == VillagerProfession.CARTOGRAPHER) {
             return SCHOLAR;
+        }
+        if (profession == VillagerProfession.CLERIC) {
+            return CLERGY;
         }
         if (profession == VillagerProfession.NONE || profession == VillagerProfession.NITWIT
                 || profession == VillagerProfession.FARMER || profession == VillagerProfession.FISHERMAN

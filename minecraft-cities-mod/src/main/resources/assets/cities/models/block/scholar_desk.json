@@ -1,0 +1,8 @@
+{
+  "parent": "minecraft:block/cube_bottom_top",
+  "textures": {
+    "top": "cities:block/scholar_desk_top",
+    "bottom": "minecraft:block/oak_planks",
+    "side": "cities:block/scholar_desk_side"
+  }
+}

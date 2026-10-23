@@ -1,8 +1,10 @@
 package com.wusternfuchs.cities;
 
 import com.mojang.logging.LogUtils;
+import com.wusternfuchs.cities.block.CitiesBlocks;
 import com.wusternfuchs.cities.entity.CitiesEntities;
 import com.wusternfuchs.cities.network.CitiesNetwork;
+import com.wusternfuchs.cities.profession.CitiesProfessions;
 import net.neoforged.bus.api.IEventBus;
 import net.neoforged.fml.ModContainer;
 import net.neoforged.fml.common.Mod;
@@ -17,6 +19,8 @@ public final class CitiesMod {
 
     public CitiesMod(IEventBus modBus, ModContainer container) {
         container.registerConfig(ModConfig.Type.SERVER, CitiesConfig.SPEC);
+        CitiesBlocks.register(modBus);
+        CitiesProfessions.register(modBus);
         CitiesEntities.register(modBus);
         CitiesNetwork.register(modBus);
         NeoForge.EVENT_BUS.register(GameEvents.class);

@@ -8,28 +8,36 @@ import java.util.function.Predicate;
 /** Builds settlement names from culture-specific roots and endings. */
 public final class NameGenerator {
     private static final String[][] PLAINS = {
-            {"Green", "Oak", "Wheat", "Bright", "Mill", "Brook", "Fair", "Elm", "Honey", "Clover", "Ash", "Bell"},
-            {"field", "ford", "ton", "bury", "stead", "vale", "wick", "ham", "brook", "dale", "meadow"}
+            {"Rot", "Schön", "Linden", "Eichen", "Wald", "Stein", "Hohen", "Neu", "Alt", "Kirch", "Mühl", "Rosen", "Fried"},
+            {"burg", "dorf", "heim", "feld", "bach", "hausen", "stadt", "au", "furt", "berg", "tal"}
     };
     private static final String[][] DESERT = {
-            {"Sun", "Sand", "Dune", "Amber", "Saff", "Kar", "Zah", "Mir", "Qas", "Tal", "Ash", "Ory"},
-            {"ara", "abad", "esh", "un", "ir", "ah", "rim", "sar", "oum", "et", "is"}
+            {"Al-", "Dar ", "Qasr ", "Wadi ", "Bir ", "Ain ", "Ras ", "Bab "},
+            {"Safa", "Rumah", "Nahr", "Sahra", "Zahir", "Qamar", "Najm", "Tamr", "Layl", "Bahr", "Hilal", "Sabah"}
     };
     private static final String[][] SAVANNA = {
-            {"Aca", "Ruma", "Ngo", "Tanu", "Kesh", "Zuri", "Oba", "Mala", "Sika", "Lion", "Red"},
-            {"ni", "ya", "ru", "mba", "nda", "ka", "wa", "lo", "rock", "plain"}
+            {"Tom", "Ga", "Ka", "Djen", "Mo", "Ti", "Ba", "Se", "Zan", "Ki", "Ma", "Su"},
+            {"buktu", "o", "ne", "bara", "ssi", "mbu", "ndo", "lwa", "nga", "rare", "lima"}
     };
     private static final String[][] SNOWY = {
-            {"Frost", "Ice", "Snow", "White", "Winter", "Rime", "Hail", "Cold", "Pale", "Bear"},
-            {"hold", "hearth", "peak", "gard", "fell", "haven", "mark", "watch", "berg"}
+            {"Bjorn", "Fjell", "Is", "Frost", "Ulf", "Sval", "Hvit", "Kald", "Rav", "Stor", "Nord", "Ask"},
+            {"heim", "vik", "fjord", "gard", "by", "dal", "holm", "stad", "berg", "nes"}
     };
     private static final String[][] TAIGA = {
-            {"Pine", "Spruce", "Fir", "Wolf", "Moss", "Elk", "Fern", "Raven", "Birch", "Timber"},
-            {"grad", "holm", "wood", "lodge", "vik", "hollow", "gorod", "stav", "ridge"}
+            {"Belo", "Novo", "Zlato", "Kras", "Yaro", "Vla", "Sveto", "Bogo", "Vysh", "Lesno", "Mosko", "Rosto"},
+            {"grad", "gorod", "sk", "vo", "slavl", "pol", "mir", "dar", "zersk", "gorsk"}
     };
     private static final String[][] OTHER = {
-            {"Stone", "River", "High", "Low", "North", "South", "Crow", "Willow", "Iron", "Copper"},
-            {"gate", "bridge", "port", "march", "crest", "wall", "moor", "cross", "end"}
+            {"Ash", "Brad", "Chester", "Dun", "Elm", "Glou", "Hart", "Kings", "Lan", "Mel", "Ox", "Wor"},
+            {"ford", "bury", "ton", "wich", "ley", "field", "by", "mouth", "bridge", "wick"}
+    };
+    private static final String[][] CHERRY = {
+            {"Saku", "Kawa", "Yama", "Ishi", "Matsu", "Taka", "Kiyo", "Fuji", "Mori", "Shira", "Haru", "Aki"},
+            {"mura", "machi", "saki", "hara", "no", "shima", "zawa", "oka", "ta", "yama", "mizu"}
+    };
+    private static final String[][] JUNGLE = {
+            {"Ix", "Chi", "Uxa", "Tik", "Pa", "Co", "Ka", "Yax", "Bal", "Tu", "Na", "Zac"},
+            {"chen", "lenque", "pan", "mal", "kal", "ba", "tun", "ha", "lum", "nal"}
     };
 
     private NameGenerator() {
@@ -43,6 +51,8 @@ public final class NameGenerator {
             case SNOWY -> SNOWY;
             case TAIGA -> TAIGA;
             case OTHER -> OTHER;
+            case CHERRY -> CHERRY;
+            case JUNGLE -> JUNGLE;
         };
         CultureNames.Names custom = CultureNames.get(style);
         if (custom != null && !custom.townStarts().isEmpty() && !custom.townEnds().isEmpty()) {

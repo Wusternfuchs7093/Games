@@ -1,5 +1,6 @@
 package com.wusternfuchs.cities.client;
 
+import com.wusternfuchs.cities.network.BoardPayload;
 import com.wusternfuchs.cities.network.CityViewPayload;
 import net.minecraft.client.Minecraft;
 
@@ -14,6 +15,15 @@ public final class ClientHooks {
             screen.update(view);
         } else {
             minecraft.setScreen(new CityScreen(view));
+        }
+    }
+
+    public static void showBoard(BoardPayload board) {
+        Minecraft minecraft = Minecraft.getInstance();
+        if (minecraft.screen instanceof JobBoardScreen screen) {
+            screen.update(board);
+        } else {
+            minecraft.setScreen(new JobBoardScreen(board));
         }
     }
 }

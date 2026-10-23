@@ -1,0 +1,23 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "misc",
+  "pattern": [
+    "BS",
+    "PP"
+  ],
+  "key": {
+    "B": {
+      "item": "minecraft:brick"
+    },
+    "S": {
+      "item": "minecraft:stone"
+    },
+    "P": {
+      "tag": "minecraft:planks"
+    }
+  },
+  "result": {
+    "id": "cities:builder_bench",
+    "count": 1
+  }
+}

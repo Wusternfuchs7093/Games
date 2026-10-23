@@ -48,6 +48,9 @@ public final class Mood {
         add(list, "well", s.count(BuildingType.WELL) > 0 ? 5 : 0);
         add(list, "tavern", s.count(BuildingType.TAVERN) > 0 ? 3 : 0);
         add(list, "medicine", s.hasTech(Tech.MEDICINE) ? 5 : 0);
+        add(list, "electricity", s.hasTech(Tech.ELECTRICITY) ? 5 : 0);
+        add(list, "temple", s.count(BuildingType.TEMPLE) > 0 ? 5 : 0);
+        add(list, "clergy", Math.min(8, s.clerics() * 2));
 
         // What each class of society expects from its town.
         if (s.count(SocialClass.ARTISAN) > 0) {
@@ -55,6 +58,9 @@ public final class Mood {
         }
         if (s.count(SocialClass.SCHOLAR) > 0) {
             add(list, "scholars", s.count(BuildingType.LIBRARY) > 0 ? 3 : -5);
+        }
+        if (s.count(SocialClass.CLERGY) > 0) {
+            add(list, "priests", s.count(BuildingType.TEMPLE) > 0 ? 3 : -5);
         }
         int elite = s.count(SocialClass.ELITE);
         if (elite > 0) {

@@ -1,0 +1,19 @@
+{
+  "variants": {
+    "facing=north": {
+      "model": "cities:block/job_board"
+    },
+    "facing=east": {
+      "model": "cities:block/job_board",
+      "y": 90
+    },
+    "facing=south": {
+      "model": "cities:block/job_board",
+      "y": 180
+    },
+    "facing=west": {
+      "model": "cities:block/job_board",
+      "y": 270
+    }
+  }
+}

@@ -85,7 +85,7 @@ public final class DisasterManager {
     private static List<Building> wooden(Settlement s) {
         List<Building> result = new ArrayList<>();
         for (Building building : s.buildings()) {
-            if (!building.stone() && building.type().upgradable()) {
+            if (building.wooden() && building.type().upgradable()) {
                 result.add(building);
             }
         }
@@ -229,7 +229,7 @@ public final class DisasterManager {
             return;
         }
         int hospitals = s.count(BuildingType.HOSPITAL);
-        int cured = 1 + hospitals * 2 + s.scholars() / 2 + (s.hasTech(Tech.MEDICINE) ? 1 : 0);
+        int cured = 1 + hospitals * 2 + s.clerics() / 2 + (s.hasTech(Tech.MEDICINE) ? 1 : 0);
         int spread = s.sick() / (s.hasLaw(Law.CLOSED_BORDERS) ? 6 : 3);
         if (hospitals > 0) {
             spread /= 2;
@@ -251,7 +251,7 @@ public final class DisasterManager {
 
     /** The sick look and move feebly; a few of them may not make it. */
     private static void afflictVillagers(ServerLevel level, SettlementData data, Settlement s) {
-        int radius = (s.tier().radiusChunks() + 1) * 16;
+        int radius = (s.radiusChunks() + 1) * 16;
         List<Villager> villagers = new ArrayList<>(level.getEntitiesOfClass(Villager.class,
                 new AABB(s.center()).inflate(radius, 48, radius),
                 v -> v.isAlive() && data.at(v.blockPosition()) == s));

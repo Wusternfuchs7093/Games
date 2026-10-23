@@ -1,0 +1,9 @@
+{
+  "replace": false,
+  "values": [
+    "cities:scholar_desk",
+    "cities:builder_bench",
+    "cities:craft_bench",
+    "cities:job_board"
+  ]
+}

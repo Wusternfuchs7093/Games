@@ -9,7 +9,9 @@ public enum Era {
     FOUNDING,
     IRON,
     MEDIEVAL,
-    RENAISSANCE;
+    RENAISSANCE,
+    INDUSTRIAL,
+    MODERN;
 
     /** Technologies of an era needed to enter the next one. */
     public static final int TECHS_TO_ADVANCE = 2;
@@ -20,5 +22,14 @@ public enum Era {
 
     public Component displayName() {
         return Component.translatable("cities.era." + id());
+    }
+
+    public static Era byId(String id) {
+        for (Era era : values()) {
+            if (era.id().equalsIgnoreCase(id)) {
+                return era;
+            }
+        }
+        return null;
     }
 }

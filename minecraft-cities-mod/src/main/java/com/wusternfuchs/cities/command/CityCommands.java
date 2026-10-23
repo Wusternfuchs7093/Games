@@ -226,7 +226,9 @@ public final class CityCommands {
                         .then(Commands.argument("name", StringArgumentType.greedyString())
                                 .suggests(SETTLEMENT_NAMES)
                                 .executes(ctx -> relations(ctx, named(ctx)))))
-                .then(Commands.literal("donate").executes(CityCommands::donate))
+                .then(Commands.literal("donate")
+                        .executes(ctx -> donate(ctx, false))
+                        .then(Commands.literal("all").executes(ctx -> donate(ctx, true))))
                 .then(Commands.literal("found")
                         .then(Commands.argument("name", StringArgumentType.greedyString())
                                 .executes(CityCommands::found)))
@@ -368,6 +370,9 @@ public final class CityCommands {
                 Component.translatable("cities.style." + s.style().name().toLowerCase(Locale.ROOT))), false);
         source.sendSuccess(() -> Component.translatable("cities.info.culture", s.style().cultureName(),
                 s.style().cultureDescription()).withStyle(ChatFormatting.GRAY), false);
+        source.sendSuccess(() -> Component.translatable("cities.info.craft", s.style().craft().displayName(),
+                s.style().craft().description(), s.count(BuildingType.CRAFTHOUSE), s.artisans())
+                .withStyle(ChatFormatting.GRAY), false);
         source.sendSuccess(() -> Component.translatable("cities.info.population", s.population(), s.adults(),
                 s.children(), s.beds()), false);
         source.sendSuccess(() -> Component.translatable("cities.info.work", s.employed(), s.workstations(),
@@ -950,6 +955,8 @@ public final class CityCommands {
         CommandSourceStack source = ctx.getSource();
         source.sendSuccess(() -> Component.translatable("cities.command.people.header", s.name(), s.adults(),
                 s.children(), s.deathsTotal()).withStyle(ChatFormatting.GOLD), false);
+        source.sendSuccess(() -> Component.translatable("cities.command.people.trades", s.scholars(), s.librarians(),
+                s.clerics(), s.builders(), s.artisans()), false);
         for (SocialClass socialClass : SocialClass.values()) {
             int count = s.count(socialClass);
             source.sendSuccess(() -> Component.literal("  ").append(socialClass.displayName())
@@ -1050,20 +1057,29 @@ public final class CityCommands {
         return 1;
     }
 
-    private static int donate(CommandContext<CommandSourceStack> ctx) throws CommandSyntaxException {
+    /** Gives the town the stack in hand, or with {@code all} every stack of that item the player carries. */
+    private static int donate(CommandContext<CommandSourceStack> ctx, boolean all) throws CommandSyntaxException {
         ServerPlayer player = ctx.getSource().getPlayerOrException();
         Settlement s = inside(ctx);
-        ItemStack stack = player.getMainHandItem();
-        if (stack.isEmpty()) {
+        ItemStack held = player.getMainHandItem();
+        if (held.isEmpty()) {
             throw EMPTY_HAND.create();
         }
 
-        int count = stack.getCount();
-        Stock.Value value = Stock.of(stack);
+        Component itemName = held.getHoverName();
+        int count;
+        Stock.Value value;
+        if (all) {
+            ItemStack sample = held.copy();
+            count = QuestManager.take(player.getInventory(), held.getItem(), Integer.MAX_VALUE);
+            value = Stock.of(sample.copyWithCount(count));
+        } else {
+            count = held.getCount();
+            value = Stock.of(held);
+            player.setItemInHand(InteractionHand.MAIN_HAND, ItemStack.EMPTY);
+        }
         int points = value.points();
         value.stock().add(s, points);
-        Component itemName = stack.getHoverName();
-        player.setItemInHand(InteractionHand.MAIN_HAND, ItemStack.EMPTY);
 
         int reputation = Math.max(1, points / DONATION_POINTS_PER_REPUTATION);
         s.changeReputation(player.getUUID(), reputation);

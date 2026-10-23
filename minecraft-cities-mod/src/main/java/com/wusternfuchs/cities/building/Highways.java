@@ -82,7 +82,8 @@ public final class Highways {
         }
         int dx = best.center().getX() - s.center().getX();
         int dz = best.center().getZ() - s.center().getZ();
-        s.setProject(new ConstructionProject(new Building(BuildingType.HIGHWAY, s.center(), Rotation.NONE, pack(dx, dz))));
+        s.setProject(new ConstructionProject(new Building(BuildingType.HIGHWAY, s.center(), Rotation.NONE, pack(dx, dz),
+                false, s.era())));
         s.record(SettlementManager.day(level), "highway", best.name());
         data.setDirty();
         return true;

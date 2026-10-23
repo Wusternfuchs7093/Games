@@ -14,6 +14,7 @@ import com.wusternfuchs.cities.diplomacy.DiplomacyManager;
 import com.wusternfuchs.cities.governance.GovernanceManager;
 import com.wusternfuchs.cities.governance.Law;
 import com.wusternfuchs.cities.people.ResidentManager;
+import com.wusternfuchs.cities.profession.CitiesProfessions;
 import com.wusternfuchs.cities.quest.QuestManager;
 import com.wusternfuchs.cities.people.Trait;
 import com.wusternfuchs.cities.research.ResearchManager;
@@ -41,6 +42,7 @@ import net.minecraft.world.entity.npc.VillagerProfession;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.entity.ai.village.poi.PoiManager;
 import net.minecraft.world.entity.ai.village.poi.PoiTypes;
+import net.minecraft.tags.PoiTypeTags;
 import net.minecraft.world.level.ChunkPos;
 import net.minecraft.world.level.levelgen.Heightmap;
 import net.minecraft.world.phys.AABB;
@@ -64,6 +66,10 @@ public final class SettlementManager {
     private static final int SIEGE_TICK_INTERVAL = 40;
     private static final int CARAVAN_TICK_INTERVAL = 100;
     private static final int FESTIVAL_TICK_INTERVAL = 10;
+    /** How far from the bell beds and workstations still count as part of the village. */
+    private static final int CORE_SEARCH_RADIUS = 96;
+    private static final int MAX_CORE_RADIUS = 6;
+    public static final int ARTISANS_PER_CRAFTHOUSE = 3;
 
     /** How long the last census of a dimension took and how many settlements it simulated, for /city admin stats. */
     private static long lastCensusMicros;
@@ -96,17 +102,22 @@ public final class SettlementManager {
         }
         if (CitiesConfig.CONSTRUCTION_ENABLED.get() && time % CitiesConfig.BUILD_INTERVAL.get() == 0) {
             SettlementData data = SettlementData.get(level);
+            boolean evenRound = (time / CitiesConfig.BUILD_INTERVAL.get()) % 2 == 0;
             for (Settlement settlement : new ArrayList<>(data.all())) {
-                if (settlement.project() != null && level.isPositionEntityTicking(settlement.center())) {
+                if (settlement.project() == null || !level.isPositionEntityTicking(settlement.center())) {
+                    continue;
+                }
+                // Every builder by trade lays an extra block; so do a building programme and, every other
+                // round, architecture.
+                int steps = 1 + Math.min(ConstructionManager.MAX_BUILDER_BONUS, settlement.builders());
+                if (settlement.hasLaw(Law.BUILDING_PROGRAM)) {
+                    steps++;
+                }
+                if (settlement.hasTech(Tech.ARCHITECTURE) && evenRound) {
+                    steps++;
+                }
+                for (int i = 0; i < steps && settlement.project() != null; i++) {
                     ConstructionManager.step(level, data, settlement);
-                    if (settlement.hasLaw(Law.BUILDING_PROGRAM) && settlement.project() != null) {
-                        ConstructionManager.step(level, data, settlement);
-                    }
-                    // Architecture: one extra block every other round.
-                    boolean evenRound = (time / CitiesConfig.BUILD_INTERVAL.get()) % 2 == 0;
-                    if (settlement.hasTech(Tech.ARCHITECTURE) && evenRound && settlement.project() != null) {
-                        ConstructionManager.step(level, data, settlement);
-                    }
                 }
             }
         }
@@ -256,7 +267,7 @@ public final class SettlementManager {
     /** Counts villagers, golems, beds and workstations inside the settlement. */
     public static void census(ServerLevel level, SettlementData data, Settlement s) {
         BlockPos c = s.center();
-        int radius = (s.tier().radiusChunks() + 1) * 16;
+        int radius = (s.radiusChunks() + 1) * 16;
         AABB box = new AABB(c).inflate(radius, CENSUS_HEIGHT, radius);
 
         int adults = 0;
@@ -264,6 +275,10 @@ public final class SettlementManager {
         int employed = 0;
         int foodProducers = 0;
         int scholars = 0;
+        int librarians = 0;
+        int clerics = 0;
+        int builders = 0;
+        int artisans = 0;
         List<Villager> residents = new ArrayList<>();
         for (Villager villager : level.getEntitiesOfClass(Villager.class, box, Villager::isAlive)) {
             if (data.at(villager.blockPosition()) != s) {
@@ -282,8 +297,16 @@ public final class SettlementManager {
             if (profession == VillagerProfession.FARMER || profession == VillagerProfession.FISHERMAN) {
                 foodProducers++;
             }
-            if (profession == VillagerProfession.LIBRARIAN || profession == VillagerProfession.CLERIC) {
+            if (CitiesProfessions.is(profession, CitiesProfessions.SCHOLAR)) {
                 scholars++;
+            } else if (CitiesProfessions.is(profession, CitiesProfessions.BUILDER)) {
+                builders++;
+            } else if (CitiesProfessions.is(profession, CitiesProfessions.ARTISAN)) {
+                artisans++;
+            } else if (profession == VillagerProfession.LIBRARIAN) {
+                librarians++;
+            } else if (profession == VillagerProfession.CLERIC) {
+                clerics++;
             }
         }
         int golems = level.getEntitiesOfClass(IronGolem.class, box, golem -> golem.isAlive()
@@ -296,8 +319,42 @@ public final class SettlementManager {
 
         s.applyCensus(adults, children, beds, workstations, employed, foodProducers, golems);
         s.setScholars(scholars);
+        s.setTrades(librarians, clerics, builders, artisans);
+        if (s.coreRadius() < 0) {
+            measureCore(level, data, s);
+        }
         ResidentManager.process(level, s, residents);
         QuestManager.update(level, s, residents);
+    }
+
+    /**
+     * Some villages are bigger than the territory of their tier: the territory grows to cover every bed, bell and
+     * workstation of the village as it was found, so none of its houses is left outside.
+     */
+    private static void measureCore(ServerLevel level, SettlementData data, Settlement s) {
+        ChunkPos center = s.centerChunk();
+        int[] needed = {0};
+        level.getPoiManager().findAll(type -> type.is(PoiTypes.HOME) || type.is(PoiTypes.MEETING)
+                                || type.is(PoiTypeTags.ACQUIRABLE_JOB_SITE), pos -> true, s.center(), CORE_SEARCH_RADIUS,
+                        PoiManager.Occupancy.ANY)
+                .filter(pos -> {
+                    Settlement owner = data.at(pos);
+                    return owner == null || owner == s;
+                })
+                .forEach(pos -> {
+                    ChunkPos chunk = new ChunkPos(pos);
+                    int dx = chunk.x - center.x;
+                    int dz = chunk.z - center.z;
+                    int r = 0;
+                    while (r * r + r < dx * dx + dz * dz) {
+                        r++;
+                    }
+                    needed[0] = Math.max(needed[0], r);
+                });
+        s.setCoreRadius(Math.min(MAX_CORE_RADIUS, needed[0]));
+        if (s.radiusChunks() > s.tier().radiusChunks()) {
+            data.updateTerritory(s);
+        }
     }
 
     /**
@@ -330,11 +387,36 @@ public final class SettlementManager {
         int idle = s.adults() - s.employed();
         int gathered = s.employed() + idle * 2;
         gathered += gathered * s.style().materialsBonusPercent() / 100;
+        if (s.hasTech(Tech.STEAM_POWER)) {
+            gathered += gathered / 2;
+        }
+        runCraft(s);
         if (s.hasLaw(Law.BUILDING_PROGRAM)) {
             gathered += gathered / 2;
             s.addWealth(-2);
         }
         s.addMaterials(gathered);
+    }
+
+    /**
+     * The culture's craft: every craft house with artisans at work turns out goods. Each one earns wealth and
+     * gives its own extra: clocks and swords sell dear, smoked fish and chocolate feed and cheer, honey and
+     * pottery help the builders, carpets and cloth go out with the caravans.
+     */
+    private static void runCraft(Settlement s) {
+        int houses = s.count(BuildingType.CRAFTHOUSE);
+        if (houses == 0 || s.artisans() == 0) {
+            return;
+        }
+        int working = Math.min(s.artisans(), houses * ARTISANS_PER_CRAFTHOUSE);
+        s.addWealth(working * 3);
+        switch (s.style().craft()) {
+            case CLOCKMAKING, SWORDSMITH -> s.addWealth(working * 2);
+            case SMOKEHOUSE -> s.addFood(working * 6);
+            case CHOCOLATE -> s.addFood(working * 3);
+            case HONEY, POTTERY -> s.addMaterials(working * 4);
+            case CARPETS, WOOL -> s.addWealth(working);
+        }
     }
 
     /** Happiness moves 40% of the way towards what the current {@link Mood} factors add up to. */
@@ -352,14 +434,15 @@ public final class SettlementManager {
         RandomSource random = level.getRandom();
         boolean prosperous = s.happiness() >= 60 && s.beds() > s.population() && s.food() >= s.population() * 5;
         if (prosperous && s.tier().ordinal() >= SettlementTier.VILLAGE.ordinal()
-                && random.nextDouble() < CitiesConfig.IMMIGRATION_CHANCE.get() * (s.hasTech(Tech.MEDICINE) ? 1.5 : 1.0)) {
+                && random.nextDouble() < CitiesConfig.IMMIGRATION_CHANCE.get() * (s.hasTech(Tech.MEDICINE) ? 1.5 : 1.0)
+                * (s.hasTech(Tech.MASS_MEDIA) ? 1.5 : 1.0)) {
             if (spawnImmigrant(level, s)) {
                 s.record(day(level), "immigrant", "");
             }
         } else if (CitiesConfig.ALLOW_EMIGRATION.get() && s.happiness() < 15 && s.adults() > 2
                 && random.nextDouble() < 0.1) {
             BlockPos c = s.center();
-            int radius = s.tier().radiusChunks() * 16;
+            int radius = s.radiusChunks() * 16;
             List<Villager> villagers = level.getEntitiesOfClass(Villager.class, new AABB(c).inflate(radius, CENSUS_HEIGHT, radius),
                     v -> v.isAlive() && !v.isBaby() && data.at(v.blockPosition()) == s);
             if (!villagers.isEmpty()) {

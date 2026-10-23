@@ -20,7 +20,7 @@ import java.util.Map;
 /**
  * A building in local coordinates: x across, y up (0 = floor), z deep. The front faces +z (south);
  * the door sits in the last row and the entrance is the spot just outside it.
- * Positions that are not set are air, so building on a site also clears it.
+ * Positions that are not set are air. The builders clear and level the whole site before they start.
  */
 public final class Blueprint {
     private final int width;
@@ -143,6 +143,12 @@ public final class Blueprint {
             set(x, y, z, foot);
             set(headPos.getX(), headPos.getY(), headPos.getZ(), foot.setValue(BedBlock.PART, BedPart.HEAD));
             partners.put(footPos, headPos);
+            return this;
+        }
+
+        /** Links the two halves of a door or bed placed by hand. */
+        public Builder partner(BlockPos first, BlockPos second) {
+            partners.put(first.immutable(), second.immutable());
             return this;
         }
 

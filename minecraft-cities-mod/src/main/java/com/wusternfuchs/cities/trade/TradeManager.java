@@ -156,6 +156,9 @@ public final class TradeManager {
         if (Highways.connected(from, to)) {
             travel = travel * 2 / 3; // a good road is a fast road
         }
+        if (from.hasTech(Tech.RAILWAYS) && to.hasTech(Tech.RAILWAYS)) {
+            travel /= 2; // trains between two connected towns
+        }
         data.caravans().add(new Caravan(from.id(), to.id(), stock, amount, price, now, now + travel));
         from.record(SettlementManager.day(level), "caravan_sent", to.name());
         data.setDirty();
@@ -237,7 +240,7 @@ public final class TradeManager {
             double dx = from.center().getX() - to.center().getX();
             double dz = from.center().getZ() - to.center().getZ();
             double length = Math.max(1, Math.sqrt(dx * dx + dz * dz));
-            int edge = to.tier().radiusChunks() * 16 - 8;
+            int edge = to.radiusChunks() * 16 - 8;
             BlockPos gate = to.center().offset((int) (dx / length * edge), 0, (int) (dz / length * edge));
             if (level.isLoaded(gate)) {
                 column = gate;

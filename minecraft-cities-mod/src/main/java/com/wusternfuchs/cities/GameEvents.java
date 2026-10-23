@@ -5,6 +5,7 @@ import com.wusternfuchs.cities.data.CultureNames;
 import com.wusternfuchs.cities.data.CustomBlueprints;
 import com.wusternfuchs.cities.defense.DefenseManager;
 import com.wusternfuchs.cities.entity.Guard;
+import com.wusternfuchs.cities.network.CitiesNetwork;
 import com.wusternfuchs.cities.people.ResidentManager;
 import com.wusternfuchs.cities.quest.QuestManager;
 import com.wusternfuchs.cities.quest.TownServices;
@@ -101,7 +102,7 @@ public final class GameEvents {
         VillagerTrading.onInteract(event);
     }
 
-    /** Shift-right-clicking a bell in a settlement shows its job board. */
+    /** Shift-right-clicking a bell in a settlement opens its job board. */
     @SubscribeEvent
     public static void onRightClickBlock(PlayerInteractEvent.RightClickBlock event) {
         if (event.getEntity().isShiftKeyDown() && event.getHand() == InteractionHand.MAIN_HAND
@@ -109,7 +110,7 @@ public final class GameEvents {
                 && level.getBlockState(event.getPos()).is(Blocks.BELL)) {
             Settlement s = SettlementData.get(level).at(event.getPos());
             if (s != null) {
-                QuestManager.showBoard(player::sendSystemMessage, player.getUUID(), s, SettlementManager.day(level));
+                CitiesNetwork.openBoard(player, event.getPos());
                 event.setCancellationResult(InteractionResult.SUCCESS);
                 event.setCanceled(true);
             }

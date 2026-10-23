@@ -1,6 +1,7 @@
 package com.wusternfuchs.cities.client;
 
 import com.wusternfuchs.cities.network.CityViewPayload;
+import com.wusternfuchs.cities.network.RequestBoardPayload;
 import com.wusternfuchs.cities.network.RequestCityPayload;
 import net.minecraft.ChatFormatting;
 import net.minecraft.client.gui.GuiGraphics;
@@ -61,6 +62,10 @@ public class CityScreen extends Screen {
         x = action(x, y, "refresh", null);
         if (!view.name().isEmpty()) {
             x = action(x, y, "donate", "city donate");
+            addRenderableWidget(Button.builder(Component.translatable("cities.gui.action.board"),
+                    button -> PacketDistributor.sendToServer(new RequestBoardPayload()))
+                    .bounds(x, y, ACTION_WIDTH, TAB_HEIGHT).build());
+            x += ACTION_WIDTH + 4;
             x = action(x, y, "rumour", "city rumour");
             if (view.mayor()) {
                 x = action(x, y, "festival", "city festival");

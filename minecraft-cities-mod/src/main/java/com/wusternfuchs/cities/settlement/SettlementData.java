@@ -120,7 +120,7 @@ public final class SettlementData extends SavedData {
     public void updateTerritory(Settlement settlement) {
         releaseTerritory(settlement);
         ChunkPos center = settlement.centerChunk();
-        int r = settlement.tier().radiusChunks();
+        int r = settlement.radiusChunks();
         for (int dx = -r; dx <= r; dx++) {
             for (int dz = -r; dz <= r; dz++) {
                 if (dx * dx + dz * dz > r * r + r) {

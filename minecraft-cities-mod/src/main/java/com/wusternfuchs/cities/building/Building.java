@@ -1,6 +1,7 @@
 package com.wusternfuchs.cities.building;
 
 import com.wusternfuchs.cities.settlement.ArchitectureStyle;
+import com.wusternfuchs.cities.research.Era;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.nbt.CompoundTag;
@@ -12,20 +13,35 @@ import javax.annotation.Nullable;
 
 /**
  * A building placed in the world: which blueprint, where its local origin is and how it is turned.
- * {@code stone} buildings use the masonry palette.
+ * {@code era} is the age it was built in, which sets its architecture; {@code stone} early buildings stand on a
+ * stone ground floor.
  */
-public record Building(BuildingType type, BlockPos origin, Rotation rotation, int variant, boolean stone) {
+public record Building(BuildingType type, BlockPos origin, Rotation rotation, int variant, boolean stone, Era era) {
 
     public Building(BuildingType type, BlockPos origin, Rotation rotation, int variant) {
-        this(type, origin, rotation, variant, false);
+        this(type, origin, rotation, variant, false, Era.FOUNDING);
+    }
+
+    public Building(BuildingType type, BlockPos origin, Rotation rotation, int variant, boolean stone) {
+        this(type, origin, rotation, variant, stone, Era.FOUNDING);
     }
 
     public Blueprint blueprint(ArchitectureStyle style) {
-        return type.blueprint(style, variant, stone);
+        return type.blueprint(style, variant, stone, era);
     }
 
-    public Building inStone() {
-        return new Building(type, origin, rotation, variant, true);
+    /** The same building rebuilt in the style of {@code newEra}. */
+    public Building rebuilt(Era newEra, boolean masonry) {
+        return new Building(type, origin, rotation, variant, masonry, newEra);
+    }
+
+    /** Early buildings that do not stand on stone are wooden and can catch fire. */
+    public boolean wooden() {
+        return Period.of(era) == Period.EARLY && !stone;
+    }
+
+    public Period period() {
+        return Period.of(era);
     }
 
     public BlockPos toWorld(BlockPos local) {
@@ -54,6 +70,7 @@ public record Building(BuildingType type, BlockPos origin, Rotation rotation, in
         tag.putString("rotation", rotation.name());
         tag.putInt("variant", variant);
         tag.putBoolean("stone", stone);
+        tag.putString("era", era.id());
         return tag;
     }
 
@@ -69,7 +86,8 @@ public record Building(BuildingType type, BlockPos origin, Rotation rotation, in
         } catch (IllegalArgumentException e) {
             rotation = Rotation.NONE;
         }
+        Era era = Era.byId(tag.getString("era"));
         return new Building(type, NbtUtils.readBlockPos(tag, "origin").orElse(BlockPos.ZERO), rotation,
-                tag.getInt("variant"), tag.getBoolean("stone"));
+                tag.getInt("variant"), tag.getBoolean("stone"), era == null ? Era.FOUNDING : era);
     }
 }

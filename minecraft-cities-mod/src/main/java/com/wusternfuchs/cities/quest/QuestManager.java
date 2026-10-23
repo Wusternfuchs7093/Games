@@ -3,6 +3,7 @@ package com.wusternfuchs.cities.quest;
 import com.wusternfuchs.cities.building.BuildingType;
 import com.wusternfuchs.cities.defense.DefenseManager;
 import com.wusternfuchs.cities.governance.GovernanceManager;
+import com.wusternfuchs.cities.network.BoardPayload;
 import com.wusternfuchs.cities.people.ResidentManager;
 import com.wusternfuchs.cities.settlement.Settlement;
 import com.wusternfuchs.cities.settlement.SettlementData;
@@ -133,6 +134,39 @@ public final class QuestManager {
                     .append(request.describe()));
         }
         out.accept(Component.translatable("cities.board.hint").withStyle(ChatFormatting.DARK_GRAY));
+    }
+
+    /** The board as the job board screen shows it, with what the player carries for each job. */
+    public static BoardPayload boardPayload(ServerPlayer player, @Nullable Settlement s) {
+        if (s == null) {
+            return new BoardPayload("", List.of(),
+                    List.of(Component.translatable("cities.command.not_in_settlement")));
+        }
+        long day = SettlementManager.day(player.serverLevel());
+        Inventory inventory = player.getInventory();
+        List<BoardPayload.Entry> entries = new ArrayList<>();
+        for (Contract contract : s.contracts()) {
+            Component text = Component.literal("#" + contract.id() + " ").withStyle(ChatFormatting.YELLOW)
+                    .append(contract.describe().copy().withStyle(ChatFormatting.WHITE))
+                    .append(Component.translatable("cities.board.progress", contract.progress(), contract.count(),
+                            contract.reward(), Math.max(0, contract.expires() - day)).withStyle(ChatFormatting.GRAY));
+            if (contract.kind() == Contract.Kind.HUNT) {
+                int state = contract.taker() == null ? BoardPayload.FREE
+                        : contract.taker().equals(player.getUUID()) ? BoardPayload.MINE : BoardPayload.TAKEN;
+                entries.add(new BoardPayload.Entry(contract.id(), text, BoardPayload.HUNT, state, 0));
+            } else {
+                entries.add(new BoardPayload.Entry(contract.id(), text, BoardPayload.DELIVER, BoardPayload.FREE,
+                        Math.min(contract.remaining(), countOf(inventory, contract.item()))));
+            }
+        }
+        for (Request request : s.requests()) {
+            Component text = Component.literal("♥ ").withStyle(ChatFormatting.LIGHT_PURPLE).append(request.describe());
+            entries.add(new BoardPayload.Entry(0, text, BoardPayload.WISH, BoardPayload.FREE,
+                    countOf(inventory, request.resolveItem())));
+        }
+        return new BoardPayload(s.name(), entries, List.of(
+                Component.translatable("cities.gui.board.hint_wish"),
+                Component.translatable("cities.gui.board.hint_keys")));
     }
 
     @Nullable

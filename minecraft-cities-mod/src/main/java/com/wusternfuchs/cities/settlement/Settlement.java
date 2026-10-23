@@ -60,6 +60,12 @@ public final class Settlement {
     private int golems;
     private int guards;
     private int scholars;
+    private int librarians;
+    private int clerics;
+    private int builders;
+    private int artisans;
+    /** Chunks needed to cover the village as it was found; -1 until measured. */
+    private int coreRadius = -1;
     private boolean censusDone;
 
     // Economy and mood
@@ -310,6 +316,43 @@ public final class Settlement {
 
     public void setScholars(int scholars) {
         this.scholars = scholars;
+    }
+
+    public int librarians() {
+        return librarians;
+    }
+
+    public int clerics() {
+        return clerics;
+    }
+
+    public int builders() {
+        return builders;
+    }
+
+    public int artisans() {
+        return artisans;
+    }
+
+    /** Workers of the trades the town cares about, counted at each census. */
+    public void setTrades(int librarians, int clerics, int builders, int artisans) {
+        this.librarians = librarians;
+        this.clerics = clerics;
+        this.builders = builders;
+        this.artisans = artisans;
+    }
+
+    public int coreRadius() {
+        return coreRadius;
+    }
+
+    public void setCoreRadius(int coreRadius) {
+        this.coreRadius = coreRadius;
+    }
+
+    /** Territory radius in chunks: what the tier grants, but never less than the village it grew from. */
+    public int radiusChunks() {
+        return Math.max(tier.radiusChunks(), coreRadius);
     }
 
     public Set<Tech> techs() {
@@ -648,6 +691,11 @@ public final class Settlement {
         tag.putInt("golems", golems);
         tag.putInt("guards", guards);
         tag.putInt("scholars", scholars);
+        tag.putInt("librarians", librarians);
+        tag.putInt("clerics", clerics);
+        tag.putInt("builders", builders);
+        tag.putInt("artisans", artisans);
+        tag.putInt("coreRadius", coreRadius);
         tag.putBoolean("censusDone", censusDone);
 
         tag.putInt("food", food);
@@ -762,6 +810,11 @@ public final class Settlement {
         s.golems = tag.getInt("golems");
         s.guards = tag.getInt("guards");
         s.scholars = tag.getInt("scholars");
+        s.librarians = tag.getInt("librarians");
+        s.clerics = tag.getInt("clerics");
+        s.builders = tag.getInt("builders");
+        s.artisans = tag.getInt("artisans");
+        s.coreRadius = tag.contains("coreRadius") ? tag.getInt("coreRadius") : -1;
         s.censusDone = tag.getBoolean("censusDone");
 
         s.food = tag.getInt("food");

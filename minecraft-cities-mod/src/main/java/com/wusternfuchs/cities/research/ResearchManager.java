@@ -21,11 +21,18 @@ public final class ResearchManager {
     private ResearchManager() {
     }
 
+    /**
+     * Research is the scholars' work: each scholar at a desk brings 3 points, a librarian 1, a library 4 and a
+     * town hall 2, plus one for the town's own curiosity.
+     */
     public static int pointsPerCensus(Settlement s) {
-        int points = 1 + s.scholars() * 2 + s.count(BuildingType.LIBRARY) * 4
+        int points = 1 + s.scholars() * 3 + s.librarians() + s.count(BuildingType.LIBRARY) * 4
                 + (s.count(BuildingType.TOWN_HALL) > 0 ? 2 : 0);
         if (s.hasTech(Tech.PRINTING)) {
             points += points / 2;
+        }
+        if (s.hasTech(Tech.EDUCATION)) {
+            points += points / 4;
         }
         points += points * s.style().researchBonusPercent() / 100;
         return points;

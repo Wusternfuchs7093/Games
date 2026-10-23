@@ -23,18 +23,22 @@ public final class ResidentManager {
     private static final String KEY_NAMED = "cities_named";
     private static final String KEY_OLD_AGE = "cities_old_age";
 
-    private static final String[] PLAINS = {"Alden", "Bree", "Cora", "Edwin", "Fenna", "Hollis", "Ida", "Merrin",
-            "Osric", "Rowan", "Tamsin", "Wilma", "Bram", "Elsie", "Garrick", "Liesel"};
+    private static final String[] PLAINS = {"Hans", "Greta", "Friedrich", "Liesel", "Klaus", "Ingrid", "Otto", "Heidi",
+            "Wilhelm", "Ursula", "Konrad", "Marta", "Dieter", "Anke", "Ernst", "Frieda"};
     private static final String[] DESERT = {"Amir", "Dalia", "Farid", "Hana", "Idris", "Jamila", "Kasim", "Layla",
             "Nadir", "Rana", "Samir", "Yara", "Zaid", "Leila", "Omar", "Safa"};
     private static final String[] SAVANNA = {"Abeni", "Chike", "Dayo", "Ekon", "Femi", "Imani", "Jabari", "Kesi",
             "Nia", "Obi", "Sefu", "Zola", "Amara", "Kito", "Malik", "Tendai"};
     private static final String[] SNOWY = {"Aslaug", "Bjorn", "Dagny", "Eirik", "Frida", "Gunnar", "Hilde", "Ivar",
             "Kari", "Leif", "Sigrid", "Torvald", "Ylva", "Ragna", "Sven", "Astrid"};
-    private static final String[] TAIGA = {"Bogdan", "Darya", "Gleb", "Kira", "Lada", "Miron", "Nadya", "Oleg",
-            "Rada", "Svyat", "Vesna", "Yarik", "Zlata", "Ivan", "Milena", "Pavel"};
-    private static final String[] OTHER = {"Ash", "Briar", "Cyan", "Dell", "Ember", "Flint", "Gale", "Hazel",
-            "Isle", "Jory", "Lark", "Moss", "Reed", "Sage", "Wren", "Yew"};
+    private static final String[] TAIGA = {"Ivan", "Darya", "Mikhail", "Anya", "Boris", "Olga", "Dmitri", "Vera",
+            "Fyodor", "Nadya", "Pavel", "Lyudmila", "Yaroslav", "Zlata", "Gleb", "Milena"};
+    private static final String[] OTHER = {"Arthur", "Edith", "George", "Mabel", "Henry", "Florence", "William",
+            "Agnes", "Thomas", "Beatrice", "Oliver", "Eleanor", "Albert", "Rose", "Edmund", "Matilda"};
+    private static final String[] CHERRY = {"Haruto", "Sakura", "Kenji", "Yuki", "Takeshi", "Aiko", "Hiroshi", "Emi",
+            "Daichi", "Hana", "Ren", "Mei", "Sora", "Rin", "Kaito", "Nao"};
+    private static final String[] JUNGLE = {"Itzel", "Balam", "Ixchel", "Kinich", "Nikte", "Chac", "Yaretzi", "Kan",
+            "Sak", "Ek", "Muluk", "Ixel", "Pakal", "Kukul", "Yax", "Naal"};
 
     private ResidentManager() {
     }
@@ -132,6 +136,8 @@ public final class ResidentManager {
             case SNOWY -> SNOWY;
             case TAIGA -> TAIGA;
             case OTHER -> OTHER;
+            case CHERRY -> CHERRY;
+            case JUNGLE -> JUNGLE;
         };
         return names[random.nextInt(names.length)];
     }

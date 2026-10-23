@@ -1,6 +1,7 @@
 package com.wusternfuchs.cities.building;
 
 import com.wusternfuchs.cities.data.CustomBlueprints;
+import com.wusternfuchs.cities.research.Era;
 import com.wusternfuchs.cities.settlement.ArchitectureStyle;
 import com.wusternfuchs.cities.settlement.SettlementTier;
 import net.minecraft.network.chat.Component;
@@ -13,7 +14,7 @@ import java.util.Map;
 import java.util.function.BiFunction;
 
 public enum BuildingType {
-    HOUSE(2, true, Blueprints::house),
+    HOUSE(Blueprints.houseVariants(), true, Blueprints::house),
     FARM(4, true, Blueprints::farm),
     WAREHOUSE(1, true, Blueprints::warehouse),
     WORKSHOP(Blueprints.workstationVariants(), true, Blueprints::workshop),
@@ -30,9 +31,16 @@ public enum BuildingType {
     /** Ring wall around the town; laid out from the terrain, its variant is the radius. */
     WALL(1, false, (palette, variant) -> new Blueprint.Builder(1, 1, 1).build()),
     /** Road to a friendly neighbour; laid out from the terrain, its variant packs the offset to the neighbour. */
-    HIGHWAY(1, false, (palette, variant) -> new Blueprint.Builder(1, 1, 1).build());
+    HIGHWAY(1, false, (palette, variant) -> new Blueprint.Builder(1, 1, 1).build()),
+    /** Church, mosque, pagoda or pyramid, as the culture builds them; where clerics serve. */
+    TEMPLE(1, true, Blueprints::temple),
+    /** The culture's own trade, worked by artisans. */
+    CRAFTHOUSE(1, true, Blueprints::craftHouse);
 
-    private static final Map<String, Blueprint> CACHE = new HashMap<>();
+    private record Key(BuildingType type, ArchitectureStyle style, int variant, boolean masonry, Period period) {
+    }
+
+    private static final Map<Key, Blueprint> CACHE = new HashMap<>();
 
     private final int variants;
     private final boolean hasRoad;
@@ -53,7 +61,7 @@ public enum BuildingType {
     }
 
     public Blueprint blueprint(ArchitectureStyle style, int variant) {
-        return blueprint(style, variant, false);
+        return blueprint(style, variant, false, Era.FOUNDING);
     }
 
     /** Built-in variants plus any datapack buildings of this type for the culture. */
@@ -65,7 +73,11 @@ public enum BuildingType {
         CACHE.clear();
     }
 
-    public Blueprint blueprint(ArchitectureStyle style, int variant, boolean stone) {
+    /**
+     * The blueprint of this type for a culture in an era. {@code masonry} only matters in the early period, when
+     * towns that know masonry put their houses on a stone ground floor.
+     */
+    public Blueprint blueprint(ArchitectureStyle style, int variant, boolean masonry, Era era) {
         List<Blueprint> custom = CustomBlueprints.forType(this, style);
         if (!custom.isEmpty()) {
             int index = Math.floorMod(variant, variants + custom.size());
@@ -74,15 +86,17 @@ public enum BuildingType {
             }
         }
         int v = Math.floorMod(variant, variants);
-        return CACHE.computeIfAbsent(name() + "/" + style.name() + "/" + v + (stone ? "/stone" : ""),
-                key -> generator.apply(Palette.of(style, stone), v));
+        Period period = Period.of(era);
+        boolean stone = masonry && period == Period.EARLY;
+        return CACHE.computeIfAbsent(new Key(this, style, v, stone, period),
+                key -> generator.apply(Palette.of(style, era, stone), v));
     }
 
-    /** Wooden buildings of these types can later be rebuilt in stone. */
+    /** Buildings that are rebuilt in the style of each new age. */
     public boolean upgradable() {
         return this == HOUSE || this == WORKSHOP || this == WAREHOUSE || this == TOWN_HALL || this == LIBRARY
-                || this == WATCHTOWER || this == HOSPITAL || this == MANOR
-                || this == TAVERN;
+                || this == WATCHTOWER || this == HOSPITAL || this == MANOR || this == TAVERN || this == TEMPLE
+                || this == CRAFTHOUSE || this == MARKET || this == WELL || this == LAMP;
     }
 
     public String id() {
@@ -119,6 +133,7 @@ public enum BuildingType {
             required.put(MARKET, 2);
             required.put(WATCHTOWER, 2);
             required.put(WALL, 1);
+            required.put(TEMPLE, 1);
         }
         if (level >= SettlementTier.METROPOLIS.ordinal()) {
             required.put(MARKET, 3);

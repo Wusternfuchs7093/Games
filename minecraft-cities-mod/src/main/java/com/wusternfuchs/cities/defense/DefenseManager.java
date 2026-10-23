@@ -61,11 +61,11 @@ public final class DefenseManager {
     }
 
     private static int patrolRadius(Settlement s) {
-        return s.tier().radiusChunks() * 16;
+        return s.radiusChunks() * 16;
     }
 
     public static List<Guard> guardsOf(ServerLevel level, Settlement s) {
-        int radius = (s.tier().radiusChunks() + 2) * 16;
+        int radius = (s.radiusChunks() + 2) * 16;
         return level.getEntitiesOfClass(Guard.class, new AABB(s.center()).inflate(radius, 64, radius),
                 guard -> guard.isAlive() && !guard.isSoldier() && !guard.isCompanion()
                         && s.id().equals(guard.settlementId()));
@@ -309,7 +309,7 @@ public final class DefenseManager {
     @Nullable
     private static BlockPos findCamp(ServerLevel level, Settlement s) {
         RandomSource random = level.getRandom();
-        int distance = s.tier().radiusChunks() * 16 + 12;
+        int distance = s.radiusChunks() * 16 + 12;
         for (int attempt = 0; attempt < 24; attempt++) {
             double angle = random.nextDouble() * Math.PI * 2;
             BlockPos column = s.center().offset((int) (Math.cos(angle) * distance), 0, (int) (Math.sin(angle) * distance));

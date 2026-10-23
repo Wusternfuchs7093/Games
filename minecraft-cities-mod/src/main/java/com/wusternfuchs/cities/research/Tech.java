@@ -17,9 +17,15 @@ public enum Tech {
     BANKING(Era.MEDIEVAL),
     PRINTING(Era.RENAISSANCE),
     NAVIGATION(Era.RENAISSANCE),
-    CIVIC_CODE(Era.RENAISSANCE);
+    CIVIC_CODE(Era.RENAISSANCE),
+    STEAM_POWER(Era.INDUSTRIAL),
+    EDUCATION(Era.INDUSTRIAL),
+    RAILWAYS(Era.INDUSTRIAL),
+    ELECTRICITY(Era.MODERN),
+    CONCRETE(Era.MODERN),
+    MASS_MEDIA(Era.MODERN);
 
-    private static final int[] COST_BY_ERA = {60, 150, 350, 700};
+    private static final int[] COST_BY_ERA = {60, 150, 350, 700, 1100, 1600};
 
     private final Era era;
 

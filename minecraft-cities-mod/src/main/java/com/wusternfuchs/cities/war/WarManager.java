@@ -394,7 +394,7 @@ public final class WarManager {
         double dx = attacker.center().getX() - defender.center().getX();
         double dz = attacker.center().getZ() - defender.center().getZ();
         double length = Math.max(1, Math.sqrt(dx * dx + dz * dz));
-        int distance = defender.tier().radiusChunks() * 16 + 8;
+        int distance = defender.radiusChunks() * 16 + 8;
         BlockPos column = defender.center().offset((int) (dx / length * distance), 0, (int) (dz / length * distance));
         if (!level.isLoaded(column)) {
             column = defender.center().offset((int) (dx / length * 24), 0, (int) (dz / length * 24));
