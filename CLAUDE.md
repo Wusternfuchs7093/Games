@@ -142,6 +142,10 @@ Extras:
 - After stage 14 the user asked how to update the mod: same as install — newest green run → Artifacts →
   `cities-mod-jar`, delete the old `cities-*.jar` from mods, put the new one in. Advised a new test world.
 
+- User asked about a mobile (Bedrock) add-on. Explained: NeoForge mod cannot run on Bedrock; an add-on would be a
+  separate rewrite (behavior+resource pack, Script API JS, forms UI), simplified. Offered to start a
+  `cities-bedrock/` .mcaddon with core features first — waiting for their answer.
+
 Next:
 - In-game testing and bug fixing with the user (top priority).
 - Ideas not built yet (from MECHANICS.md): JourneyMap/Xaero markers, families/inheritance, guilds, banks/loans,
