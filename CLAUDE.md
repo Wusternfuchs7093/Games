@@ -139,6 +139,9 @@ Extras:
 
 - User asked how to add a building to a village: town plans itself; mayor `/city order <type>` (be mayor via `/city run` election or `/city found`); op `/city admin build <type>`; self-built blocks count only as beds/workstations (POI), not as registered buildings. Same `/city claim` offer applies.
 
+- After stage 14 the user asked how to update the mod: same as install — newest green run → Artifacts →
+  `cities-mod-jar`, delete the old `cities-*.jar` from mods, put the new one in. Advised a new test world.
+
 Next:
 - In-game testing and bug fixing with the user (top priority).
 - Ideas not built yet (from MECHANICS.md): JourneyMap/Xaero markers, families/inheritance, guilds, banks/loans,
